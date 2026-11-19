@@ -23,6 +23,8 @@ function recolor(style, lang) {
     else if (id === 'waterway') L.paint['line-color'] = C.water;
     else if (['park', 'landcover_wood', 'landuse_residential'].includes(id)) { L.paint['fill-color'] = C.green; if ('fill-opacity' in L.paint) delete L.paint['fill-opacity']; }
     else if (id === 'building') continue; // se sustituye por la extrusión de abajo
+    // Nombres de calles pequeñas y caminos: recolocarlos en cada fotograma del zoom es lo más caro y no aporta al vuelo.
+    else if (id === 'highway-name-path' || id === 'highway-name-minor') continue;
     else if (l.type === 'line' && /casing/.test(id)) L.paint['line-color'] = C.grid;
     else if (l.type === 'line' && /^(highway|road|tunnel|aeroway)/.test(id)) L.paint['line-color'] = C.white;
     else if (l.type === 'line' && /^railway/.test(id)) L.paint['line-color'] = '#B7C6E2';
@@ -40,7 +42,7 @@ function recolor(style, lang) {
   }
   const firstSymbol = layers.findIndex((l) => l.type === 'symbol');
   layers.splice(firstSymbol < 0 ? layers.length : firstSymbol, 0, {
-    id: 'building-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: MOBILE ? 15 : 13, // en móvil, edificios 3D solo cerca de la calle
+    id: 'building-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: MOBILE ? 15 : 14, // en móvil, edificios 3D solo cerca de la calle
     paint: {
       'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#FFFFFF', 40, '#DCE6F7'],
       'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6],
@@ -61,7 +63,7 @@ export async function createMap(container, { center, zoom, pitch, bearing, marke
     container, style, center, zoom, pitch, bearing,
     interactive: false, attributionControl: false, fadeDuration: 0, maxPitch: 70,
     // El scroll de la página mueve la cámara: el mapa no captura gestos. En móvil, menos píxeles y menos tiles.
-    pixelRatio: Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 2), maxTileCacheSize: MOBILE ? 40 : 120,
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), maxTileCacheSize: MOBILE ? 60 : 200,
     canvasContextAttributes: { antialias: true },
   });
   // Atribución que declara la fuente (OpenFreeMap · © OpenMapTiles · Data from OpenStreetMap), siempre visible.

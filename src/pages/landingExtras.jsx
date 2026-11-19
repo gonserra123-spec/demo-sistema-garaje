@@ -166,18 +166,31 @@ export function MapSection() {
   const api = useRef(null);
   const started = useRef(false);
   const target = useRef(0);
-  const spring = useRef(createSpring(0, { tension: 80, friction: 22, precision: 0.0002 }));
+  const spring = useRef(createSpring(0, { tension: 150, friction: 28, precision: 0.0002 }));
 
   useViewport(wrap, ({ rect, vh }) => {
     target.current = clamp(-rect.top / Math.max(1, rect.height - vh));
     // Carga diferida: el chunk de MapLibre se pide cuando la sección está a menos de dos pantallas.
-    const near = rect.top < vh * 2.2 && rect.bottom > -vh * 1.5;
+    const near = rect.top < vh * 3.5 && rect.bottom > -vh * 1.5; // antes, para que la precarga del vuelo acabe a tiempo
     if (mode === 'fly' && !started.current && near) {
       started.current = true; // una sola carga aunque el ticker vuelva a medir antes del siguiente render
       setStatus('loading');
       import('./mapEngine.js')
         .then(({ createMap }) => createMap(holder.current, { ...camAt(Math.min(target.current, 0.74)), marker: [LOCATION.lng, LOCATION.lat], markerLabel: t('landing.map.demoTag'), lang }))
-        .then((m) => { if (!started.current) { m.map.remove(); return; } api.current = m; setStatus('ready'); })
+        .then(async (m) => {
+          if (!started.current) { m.map.remove(); return; }
+          // Precarga del vuelo detrás de «Cargando el mapa»: se recorren los tramos para dejar los tiles en caché
+          // y que el scroll no tenga que esperar a la red (máximo 6 s en total).
+          const t0 = performance.now();
+          for (const p of [0.12, 0.24, 0.37, 0.5, 0.62, 0.74]) {
+            if (!started.current || performance.now() - t0 > 6000) break;
+            m.map.jumpTo(camAt(p));
+            await new Promise((res) => { const id = setTimeout(res, 1500); m.map.once('idle', () => { clearTimeout(id); res(); }); });
+          }
+          if (!started.current) { m.map.remove(); return; }
+          m.map.jumpTo(camAt(Math.min(spring.current.value, 0.74)));
+          api.current = m; setStatus('ready');
+        })
         .catch(() => { started.current = false; setStatus('failed'); });
     } else if (started.current && !near && !api.current) {
       started.current = false; // carga en curso que ya no hace falta: al resolverse se elimina (ver .then)

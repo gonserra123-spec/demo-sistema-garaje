@@ -118,6 +118,13 @@ async function notify(req, env) {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    if (url.pathname.startsWith('/assets/')) {
+      // Un fichero con hash que ya no existe (página antigua tras un despliegue) es 404, nunca la página de la app:
+      // si no, el navegador recibe HTML donde espera JavaScript y la web se queda en blanco.
+      const res = await env.ASSETS.fetch(req);
+      if (res.status === 200 && /text\/html/i.test(res.headers.get('Content-Type') || '')) return new Response('No encontrado', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+      return res;
+    }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     try {
       if (req.method !== 'POST') return json({ ok: false, error: 'not_found' }, 404);

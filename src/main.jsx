@@ -9,6 +9,11 @@ import App from './App.jsx';
 import { LangProvider } from './i18n/index.jsx';
 import { startTicker } from './lib/ticker.js';
 
+// Tras un despliegue, una página abierta puede pedir un trozo de código que ya no existe: se recarga una vez.
+window.addEventListener('vite:preloadError', (e) => {
+  try { if (sessionStorage.getItem('tg_reloaded')) return; sessionStorage.setItem('tg_reloaded', '1'); } catch { return; }
+  e.preventDefault(); window.location.reload();
+});
 startTicker();
 createRoot(document.getElementById('root')).render(<LangProvider><App /></LangProvider>);
 

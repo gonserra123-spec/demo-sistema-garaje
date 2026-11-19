@@ -194,3 +194,9 @@ test('correos: el enlace tiene que ser https a /consulta/CODIGO (no javascript: 
     assert.throws(() => renderEmail({ kind: 'ready', shop: 'T', plate: '1234BCD', consultaUrl: bad }), undefined, bad);
   }
 });
+
+test('worker: un fichero de /assets/ que no existe es 404, no la página', async () => {
+  const e = env({ ASSETS: { fetch: async (r) => (new URL(r.url).pathname === '/assets/ok.js' ? new Response('x', { headers: { 'Content-Type': 'text/javascript' } }) : new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } })) } });
+  assert.equal((await worker.fetch(new Request('https://demo.test/assets/viejo-123.js'), e)).status, 404);
+  assert.equal((await worker.fetch(new Request('https://demo.test/assets/ok.js'), e)).status, 200);
+});
