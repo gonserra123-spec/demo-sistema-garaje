@@ -4,3 +4,5 @@ dist
 .env.local
 .playwright-mcp
 shots
+.wrangler
+.dev.vars
