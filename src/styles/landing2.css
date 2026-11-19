@@ -177,3 +177,18 @@
   .site-header .wordmark { font-size: 1.25rem; padding: 6px 8px; }
   .header-right .lang-btn { min-width: 44px; }
 }
+
+/* Demo 2 en móvil: mientras está fijada tiene que verse el móvil animado, no solo el texto. */
+@media (max-width: 899px) {
+  .demo2 .pin-stage { padding: 72px 0 16px; align-items: start; }
+  .demo2 .split { gap: 14px; }
+  .demo2 .sec-head { margin-bottom: 0; gap: 10px; }
+  .demo2 .sec-head .lead, .demo2 .points { display: none; }
+  .demo2 .h-section { font-size: 1.75rem; }
+  .demo2 .demo-cta { gap: 6px 12px; }
+  .demo2 .demo-cta .btn { min-height: 44px; padding: 0 16px; font-size: 0.9375rem; }
+  .demo2 .phone-col { gap: 8px; }
+  .demo2 .phone { padding: 14px; gap: 10px; }
+  .demo2 .phone .says { min-height: 3.4em; font-size: 1.0625rem; }
+  .demo2 .phone .btn { min-height: 44px; }
+}
