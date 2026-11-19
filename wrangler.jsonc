@@ -5,6 +5,8 @@
   "name": "demo-sistema-garaje",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-01",
+  // Compila la app antes de desplegar (también en Workers Builds, donde dist/ no existe al empezar).
+  "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
