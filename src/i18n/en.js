@@ -1,7 +1,7 @@
 export default {
   common: {
     language: 'Language', demo: 'DEMO', demoNote: 'Fictional demo data', close: 'Close', cancel: 'Cancel', save: 'Save', add: 'Add',
-    delete: 'Delete', back: 'Back', loading: 'Loading…', optional: 'optional', skip: 'Skip to content', home: 'Home', pending: 'MISSING',
+    delete: 'Delete', back: 'Back', loading: 'Loading…', optional: 'optional', skip: 'Skip to content', home: 'Home', backHome: 'Back to the website', pending: 'MISSING',
   },
   states: {
     received: 'Received', diagnosis: 'In diagnosis', awaiting_approval: 'Awaiting approval', awaiting_part: 'Awaiting part',

@@ -41,6 +41,7 @@ function Login() {
     <main className="login">
       <form className="login-card" onSubmit={submit} noValidate>
         <div className="login-top"><Wordmark /><LangSwitch /></div>
+        <Btn variant="ghost sm" to="/">← {t('common.backHome')}</Btn>
         <h1>{t('panel.login.title')}</h1>
         {config?.demo && <p className="notice notice--warn"><span className="demo-tag">{t('common.demo')}</span> {t('panel.login.demo', { pin: config.demoPin, code: config.workshopCode })}</p>}
         <Field label={t('panel.login.code')}>{(a) => <input className="input" autoCapitalize="characters" autoComplete="off" spellCheck="false" maxLength={12} value={v.code} onChange={(e) => setV({ ...v, code: e.target.value.toUpperCase() })} {...a} />}</Field>
@@ -341,6 +342,7 @@ export default function Panel() {
         {config?.demo && <span className="demo-tag" title={t('common.demoNote')}>{t('common.demo')}</span>}
         <span className="grow" />
         <SaveStatus />
+        <Btn variant="ghost sm" to="/">← {t('common.backHome')}</Btn>
         <LangSwitch />
         <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setFrom(null); setView('outbox'); setTab('list'); }}>{t('panel.outbox.nav')}{mails.length > 0 && <span className="mini-tag">{mails.length}</span>}</Btn>
         <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setFrom(null); setView('customers'); setTab('list'); }}>{t('panel.customers.nav')}</Btn>

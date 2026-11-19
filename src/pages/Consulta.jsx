@@ -105,6 +105,7 @@ export default function Consulta({ code }) {
         {workshop && <span className="who"><strong>{workshop.name}</strong></span>}
         {workshop?.code === 'DEMO01' && <span className="demo-tag">{t('common.demo')}</span>}
         <span className="grow" />
+        <Btn variant="ghost sm" to="/">← {t('common.backHome')}</Btn>
         <LangSwitch />
       </header>
       {loadErr && (
