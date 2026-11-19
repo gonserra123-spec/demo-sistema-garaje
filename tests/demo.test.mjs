@@ -188,3 +188,9 @@ test('worker /api/notify: el token firma el mensaje exacto (no vale para otro de
   const expired = await sign({ w: 'DEMO01', m: await hex('ready|a@example.com|1234BCD'), exp: Date.now() - 1 });
   assert.equal((await worker.fetch(req('/api/notify', { body: same, headers: { Authorization: `Bearer ${expired}` } }), e)).status, 401);
 });
+
+test('correos: el enlace tiene que ser https a /consulta/CODIGO (no javascript: ni otra ruta)', () => {
+  for (const bad of ['javascript:alert(1)//consulta/DEMO01', 'http://x.test/consulta/DEMO01', 'https://x.test/otra/DEMO01', 'https://x.test/consulta/DEMO01#1234BCD']) {
+    assert.throws(() => renderEmail({ kind: 'ready', shop: 'T', plate: '1234BCD', consultaUrl: bad }), undefined, bad);
+  }
+});

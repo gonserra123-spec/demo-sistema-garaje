@@ -1,6 +1,10 @@
 // Chunk diferido del mapa: MapLibre GL + estilo de OpenFreeMap recoloreado a la paleta del proyecto.
 // Solo se descarga cuando la sección del mapa está cerca del viewport.
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+// MapLibre 6 carga su worker desde un fichero aparte: Vite lo empaqueta y aquí se le da su URL (mismo origen, CSP 'self').
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+maplibregl.setWorkerUrl(workerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';

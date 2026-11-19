@@ -41,7 +41,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 // consultaUrl: dirección de la consulta del taller SIN matrícula (p. ej. https://…/consulta/DEMO01).
 export function renderEmail({ kind, shop, plate, consultaUrl, lang = 'es' }) {
   if (!EMAIL_KINDS.includes(kind)) throw new Error('kind');
-  if (/[?&#]/.test(consultaUrl)) throw new Error('url'); // nada de parámetros: la matrícula no viaja en enlaces
+  // Solo https y sin parámetros ni fragmento: la matrícula no viaja en enlaces y no cabe un esquema raro por mala configuración.
+  let u;
+  try { u = new URL(consultaUrl); } catch { throw new Error('url'); }
+  if (u.protocol !== 'https:' && u.hostname !== 'localhost') throw new Error('url');
+  if (u.search || u.hash || /[?&#]/.test(consultaUrl) || !/\/consulta\/[A-Za-z0-9]{4,12}$/.test(u.pathname)) throw new Error('url');
   const L = T[lang] || T.es;
   const p = formatPlate(plate);
   const lines = [L.hello, '', L[kind].line(shop, p), '', L.how, consultaUrl, '', '—', L.why(shop), L.stop];

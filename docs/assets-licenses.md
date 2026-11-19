@@ -38,8 +38,19 @@ Si más adelante se añaden GLB (Kenney, Quaternius, Poly Pizza, Sketchfab), sol
 | lenis | MIT |
 | qrcode-generator | MIT |
 | @supabase/supabase-js | MIT |
-| vite, @vitejs/plugin-react (desarrollo) | MIT |
+| maplibre-gl | BSD-3-Clause (se carga solo en la sección de ubicación) |
+| vite, @vitejs/plugin-react, wrangler (desarrollo) | MIT / MIT o Apache-2.0 |
 
 ## Iconos e imágenes
 
-Los iconos de la interfaz y el favicon son SVG propios dibujados para este proyecto. No hay fotografías.
+Los iconos de la interfaz, el favicon y la **fachada ilustrada del taller** (`Facade` en `src/pages/landingExtras.jsx`) son SVG propios dibujados para este proyecto. No hay fotografías. La fachada tiene un hueco configurable para una foto real (`photo` en `src/config/location.js`): si se pone una, anotar aquí autor y licencia.
+
+## Mapa
+
+| Recurso | Procedencia | Licencia y atribución |
+|---|---|---|
+| Teselas vectoriales, estilo base «Positron», fuentes y sprites | OpenFreeMap (`tiles.openfreemap.org`), sin clave | Servicio gratuito. Atribución obligatoria «OpenFreeMap © OpenMapTiles Data from OpenStreetMap», que MapLibre muestra siempre (control de atribución no compacto) |
+| Datos del mapa | OpenStreetMap | ODbL 1.0, «© OpenStreetMap contributors» |
+| Esquema OpenMapTiles | OpenMapTiles | BSD-3 (código) / CC-BY 4.0 (diseño) |
+
+El estilo se recolorea en el navegador con la paleta del proyecto (`src/pages/mapEngine.js`); no se redistribuye ningún fichero de OpenFreeMap. La ubicación que se muestra es de demostración y no corresponde a ningún taller.

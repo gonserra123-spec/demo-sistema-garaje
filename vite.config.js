@@ -24,6 +24,7 @@ const demoApi = () => ({
 export default defineConfig({
   plugins: [react(), demoApi()],
   server: { port: 5200, strictPort: true },
+  worker: { format: 'es' }, // el worker de MapLibre 6 es un módulo ES
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1100, // three va entero en el chunk diferido de la escena

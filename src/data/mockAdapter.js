@@ -184,7 +184,8 @@ const apptDto = (a) => ({ id: a.id, plate: a.plate, make: a.make, model: a.model
 
 // Correo al cliente: solo si dejó correo y aceptó los avisos. En la demo va a la bandeja de vista previa.
 const mailer = createMockEmailAdapter({
-  store: (m) => tx((db) => { db.outbox = [m, ...(db.outbox || [])].slice(0, MAX_OUTBOX); }),
+  // Solo se guarda el destinatario enmascarado: la vista previa no necesita más.
+  store: ({ to, ...m }) => tx((db) => { db.outbox = [{ ...m, to: maskEmail(to) }, ...(db.outbox || [])].slice(0, MAX_OUTBOX); }),
 });
 async function notify(v, kind, workshop) {
   if (!v.email || !v.notifyConsent) return;
@@ -403,7 +404,7 @@ export function createMockAdapter() {
       return reply({ ok: true, workshop: w });
     }),
     // Bandeja de vista previa: el correo exacto que recibiría el cliente. El destinatario va enmascarado.
-    outbox: authed(() => reply({ ok: true, messages: (loadDb().outbox || []).map(({ to, ...m }) => ({ ...m, to: maskEmail(to) })) })),
+    outbox: authed(() => reply({ ok: true, messages: loadDb().outbox || [] })),
     clearOutbox: authed(() => { tx((db) => { db.outbox = []; }); emitLocal({ kind: 'outbox' }); broadcast({ kind: 'outbox' }); return reply({ ok: true }); }),
     resetDemo: () => { const db = seedDb(); saveDb(db); broadcast({ kind: 'reset' }); emitLocal({ kind: 'reset' }); return reply({ ok: true }); },
 
@@ -432,6 +433,7 @@ export function createMockAdapter() {
       if (input.website || String(input.code || '').toUpperCase() !== db.workshop.code) return floor(t0, { ok: false });
       let v = null;
       if (input.vehicleCode !== undefined) {
+        if (!limits.lookup('qr')) return { status: 429, ok: false, error: 'rate_limited' }; // mismo límite que la matrícula
         if (!isVehicleCode(input.vehicleCode)) return floor(t0, { ok: false });
         v = db.vehicles.find((x) => x.publicCode === String(input.vehicleCode).toUpperCase()) || null;
       } else {
