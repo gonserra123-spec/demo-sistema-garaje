@@ -212,7 +212,6 @@ export function MapSection() {
     <div className="map-card" ref={card} data-stage="0">
       <span className="demo-tag">{t('landing.map.demoTag')}</span>
       <Reveal className="h-section" id="map-title" lines={t('landing.map.title')} />
-      <p className="lead">{t('landing.map.lead')}</p>
       <address className="map-addr"><strong>{street}</strong><br />{LOCATION.city}</address>
       <p className="map-hours"><strong>{t('landing.map.hours')}:</strong> {(LOCATION.hours[lang] || LOCATION.hours.es).join(' · ')}</p>
       <ol className="map-steps" aria-hidden="true">{t('landing.map.steps').map((s) => <li key={s}>{s}</li>)}</ol>
