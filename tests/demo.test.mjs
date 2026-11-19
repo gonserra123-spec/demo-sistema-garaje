@@ -169,3 +169,22 @@ test('worker /api/notify: sin token de sesión del panel no envía nada', async 
   assert.equal((await worker.fetch(req('/api/notify', { body }), env({ NOTIFY_TOKEN_SECRET: 's'.repeat(32) }))).status, 401);
   assert.equal((await worker.fetch(req('/api/notify', { body, headers: { Authorization: 'Bearer abc.def' } }), env({ NOTIFY_TOKEN_SECRET: 's'.repeat(32) }))).status, 401);
 });
+
+test('worker /api/notify: el token firma el mensaje exacto (no vale para otro destinatario)', async () => {
+  const secret = 's'.repeat(32);
+  const b64u = (buf) => Buffer.from(buf).toString('base64url');
+  const hex = async (t) => Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t))).toString('hex');
+  const sign = async (payload) => {
+    const p = b64u(JSON.stringify(payload));
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return `${p}.${b64u(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(p)))}`;
+  };
+  const tok = await sign({ w: 'DEMO01', m: await hex('ready|a@example.com|1234BCD'), exp: Date.now() + 60_000 });
+  const e = env({ NOTIFY_TOKEN_SECRET: secret });
+  const other = { kind: 'ready', to: 'otro@example.com', workshopCode: 'DEMO01', plate: '1234BCD' };
+  assert.equal((await worker.fetch(req('/api/notify', { body: other, headers: { Authorization: `Bearer ${tok}` } }), e)).status, 401);
+  const same = { ...other, to: 'a@example.com' };
+  assert.equal((await worker.fetch(req('/api/notify', { body: same, headers: { Authorization: `Bearer ${tok}` } }), e)).status, 503); // válido; sin Resend configurado
+  const expired = await sign({ w: 'DEMO01', m: await hex('ready|a@example.com|1234BCD'), exp: Date.now() - 1 });
+  assert.equal((await worker.fetch(req('/api/notify', { body: same, headers: { Authorization: `Bearer ${expired}` } }), e)).status, 401);
+});

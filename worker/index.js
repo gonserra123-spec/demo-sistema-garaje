@@ -50,10 +50,10 @@ async function allow(binding, key, max, windowMs) {
 }
 const ipOf = (req) => req.headers.get('CF-Connecting-IP') || 'unknown';
 
-async function sendResend(env, msg) {
+async function sendResend(env, msg, idempotencyKey) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) },
     body: JSON.stringify(msg),
   });
   // Sin registrar el cuerpo: lleva datos personales.
@@ -76,12 +76,14 @@ async function contact(req, env) {
   return ok ? json({ ok: true, delivered: true }) : json({ ok: false, error: 'generic' }, 502);
 }
 
-// Token de sesión del panel: base64url(JSON {w: código del taller, exp}) + '.' + HMAC-SHA256. Lo emite el
-// backend del panel (Edge Function `panel` en Supabase) con el mismo NOTIFY_TOKEN_SECRET.
+// Token de un solo mensaje: base64url(JSON {w: código del taller, m: sha256 hex de "kind|to|plate", exp}) + '.' +
+// HMAC-SHA256. Lo emite el backend del panel (Edge Function `panel` en Supabase) con el mismo NOTIFY_TOKEN_SECRET,
+// después de comprobar en su base de datos el coche, el correo y el consentimiento. Así quien tenga un token no
+// puede elegir otro destinatario ni otra matrícula: el Worker solo envía exactamente el mensaje firmado.
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 async function readPanelToken(req, env) {
   const m = /^Bearer ([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(req.headers.get('Authorization') || '');
-  if (!m || !env.NOTIFY_TOKEN_SECRET) return null;
+  if (!m || !env.NOTIFY_TOKEN_SECRET || env.NOTIFY_TOKEN_SECRET.length < 32) return null;
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.NOTIFY_TOKEN_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = b64u(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(m[1])));
   if (sig.length !== m[2].length) return null;
@@ -89,7 +91,7 @@ async function readPanelToken(req, env) {
   if (diff) return null;
   try {
     const p = JSON.parse(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')));
-    return p && typeof p.w === 'string' && Number(p.exp) > Date.now() ? p : null;
+    return p && typeof p.w === 'string' && /^[0-9a-f]{64}$/.test(p.m || '') && Number(p.exp) > Date.now() ? { ...p, sig: m[2] } : null;
   } catch { return null; }
 }
 
@@ -102,12 +104,14 @@ async function notify(req, env) {
   const plate = normalizePlate(body.plate);
   const to = cleanText(body.to).toLowerCase();
   if (!EMAIL_KINDS.includes(body.kind) || !isEmail(to) || !classifyPlate(plate) || body.workshopCode !== tok.w) return json({ ok: false, error: 'invalid' }, 422);
+  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${body.kind}|${to}|${plate}`)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (digest !== tok.m) return json({ ok: false, error: 'unauthorized' }, 401); // el token no es para este mensaje
   // Remitente y reply-to por taller: WORKSHOP_EMAIL_CONFIG = {"CODIGO":{"name":"…","from":"…","replyTo":"…","consultaUrl":"https://…/consulta/CODIGO"}}
   let cfg = null;
   try { cfg = JSON.parse(env.WORKSHOP_EMAIL_CONFIG || '{}')[tok.w] || null; } catch { cfg = null; }
   if (!env.RESEND_API_KEY || !cfg || !configured(cfg.from)) return json({ ok: false, error: 'not_configured' }, 503);
   const mail = renderEmail({ kind: body.kind, shop: cfg.name, plate, consultaUrl: cfg.consultaUrl, lang: body.lang === 'en' ? 'en' : 'es' });
-  const ok = await sendResend(env, { from: cfg.from, to: [to], ...(configured(cfg.replyTo) ? { reply_to: cfg.replyTo } : {}), subject: mail.subject, text: mail.text, html: mail.html });
+  const ok = await sendResend(env, { from: cfg.from, to: [to], ...(configured(cfg.replyTo) ? { reply_to: cfg.replyTo } : {}), subject: mail.subject, text: mail.text, html: mail.html }, `notify-${tok.sig.slice(0, 64)}`); // reenviar el mismo token no duplica el correo
   return ok ? json({ ok: true }) : json({ ok: false, error: 'generic' }, 502);
 }
 
