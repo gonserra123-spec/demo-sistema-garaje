@@ -56,6 +56,8 @@ export function DemoCard({ who, n }) {
 /* ---------- Transición por píxeles entre dos secciones ---------- */
 // Un lienzo de celdas: cada celda pasa del color de arriba al de abajo cuando el progreso supera su umbral
 // (umbral = posición vertical + ruido). Resultado: el color de arriba se deshace en mosaico.
+// Móvil o pantalla táctil: sin mosaico animado ni parallax (Regla 7 en móvil); se queda un fotograma fijo.
+const LIGHT = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
 const hash = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 export function PixelSeam({ from, to, cell = 22 }) {
   const wrap = useRef(null); const cv = useRef(null);
@@ -81,7 +83,7 @@ export function PixelSeam({ from, to, cell = 22 }) {
   useViewport(wrap, ({ rect, vh, inView }) => {
     if (!inView) return;
     // 0 cuando la franja entra por abajo, 1 cuando llega al tercio superior.
-    const p = reducedMotion ? 0.5 : 0.85 * clamp((vh - rect.top) / (vh * 0.75 + rect.height)); // nunca del todo: el borde de arriba queda en mosaico
+    const p = reducedMotion || LIGHT ? 0.5 : 0.85 * clamp((vh - rect.top) / (vh * 0.75 + rect.height)); // nunca del todo: el borde de arriba queda en mosaico
     if (Math.abs(p - st.current.p) < 0.004) return;
     st.current.p = p; draw(p);
   });
@@ -97,7 +99,7 @@ export function BlueprintGrid({ tone = 'light' }) {
     const p = (vh - rect.top) / (vh + rect.height); // 0..1 mientras atraviesa la pantalla
     a.current.style.transform = `translate3d(0, ${((0.5 - p) * 60).toFixed(1)}px, 0)`;
     b.current.style.transform = `translate3d(0, ${((0.5 - p) * 180).toFixed(1)}px, 0)`;
-  }, !reducedMotion);
+  }, !reducedMotion && !LIGHT);
   return (
     <div className="bp-grid" data-grid={tone} ref={wrap} aria-hidden="true">
       <i className="bp-fine" ref={a} />
@@ -168,13 +170,18 @@ export function MapSection() {
   useViewport(wrap, ({ rect, vh }) => {
     target.current = clamp(-rect.top / Math.max(1, rect.height - vh));
     // Carga diferida: el chunk de MapLibre se pide cuando la sección está a menos de dos pantallas.
-    if (mode === 'fly' && !started.current && rect.top < vh * 2.2) {
+    const near = rect.top < vh * 2.2 && rect.bottom > -vh * 1.5;
+    if (mode === 'fly' && !started.current && near) {
       started.current = true; // una sola carga aunque el ticker vuelva a medir antes del siguiente render
       setStatus('loading');
       import('./mapEngine.js')
-        .then(({ createMap }) => createMap(holder.current, { ...camAt(0), marker: [LOCATION.lng, LOCATION.lat], markerLabel: t('landing.map.demoTag'), lang }))
-        .then((m) => { api.current = m; setStatus('ready'); })
-        .catch(() => setStatus('failed'));
+        .then(({ createMap }) => createMap(holder.current, { ...camAt(Math.min(target.current, 0.74)), marker: [LOCATION.lng, LOCATION.lat], markerLabel: t('landing.map.demoTag'), lang }))
+        .then((m) => { if (!started.current) { m.map.remove(); return; } api.current = m; setStatus('ready'); })
+        .catch(() => { started.current = false; setStatus('failed'); });
+    } else if (started.current && !near && api.current) {
+      // Lejos de la sección: se destruye la instancia (libera GPU y memoria); al volver se crea otra.
+      try { api.current.map.remove(); } catch { /* ya eliminado */ }
+      api.current = null; started.current = false; setStatus('idle');
     }
   }, mode === 'fly');
 

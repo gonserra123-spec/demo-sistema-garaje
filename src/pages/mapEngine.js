@@ -7,6 +7,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 maplibregl.setWorkerUrl(workerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+const MOBILE = typeof window !== 'undefined' && (window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches);
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 const C = { paper: '#F4F7FC', grid: '#D9E2F2', blue100: '#E6EEFC', water: '#CFDDF8', blue500: '#2F6FED', blue900: '#0B2A5B', mute: '#44567A', white: '#FFFFFF', green: '#E8EEF6' };
 
@@ -39,7 +40,7 @@ function recolor(style, lang) {
   }
   const firstSymbol = layers.findIndex((l) => l.type === 'symbol');
   layers.splice(firstSymbol < 0 ? layers.length : firstSymbol, 0, {
-    id: 'building-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: 13,
+    id: 'building-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: MOBILE ? 15 : 13, // en móvil, edificios 3D solo cerca de la calle
     paint: {
       'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#FFFFFF', 40, '#DCE6F7'],
       'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6],
@@ -59,6 +60,8 @@ export async function createMap(container, { center, zoom, pitch, bearing, marke
   const map = new maplibregl.Map({
     container, style, center, zoom, pitch, bearing,
     interactive: false, attributionControl: false, fadeDuration: 0, maxPitch: 70,
+    // El scroll de la página mueve la cámara: el mapa no captura gestos. En móvil, menos píxeles y menos tiles.
+    pixelRatio: Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 2), maxTileCacheSize: MOBILE ? 40 : 120,
     canvasContextAttributes: { antialias: true },
   });
   // Atribución que declara la fuente (OpenFreeMap · © OpenMapTiles · Data from OpenStreetMap), siempre visible.

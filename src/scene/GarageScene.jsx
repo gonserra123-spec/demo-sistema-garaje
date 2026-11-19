@@ -73,9 +73,17 @@ function Bridge({ template, name, brandColor, mode, interactive, onSelect, onRea
 
   useEffect(() => { ref.current.rig?.setSize(size.width, size.height); invalidate(); }, [size.width, size.height]);
 
+  // Fuera de pantalla o con la pestaña oculta no se simula ni se dibuja (el ticker sigue siendo el único bucle).
+  const onScreen = useRef(true);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => { onScreen.current = e.isIntersecting; if (e.isIntersecting) invalidate(); }, { rootMargin: '120px' });
+    io.observe(gl.domElement);
+    return () => io.disconnect();
+  }, [gl]);
+
   useTick((s) => {
     const { engine, rig, perf } = ref.current;
-    if (!engine) return;
+    if (!engine || !onScreen.current || document.hidden) return;
     const dt = s.dt / 1000;
     if (simulate && sim && !reducedMotion) sim.tick(Math.min(0.05, dt) * engine.timeScale, engine);
     const a = engine.update(dt);
@@ -87,6 +95,9 @@ function Bridge({ template, name, brandColor, mode, interactive, onSelect, onRea
     if (perf.warm > 20 && s.dt < 250) {
       perf.samples.push(s.dt); if (perf.samples.length > 600) perf.samples.shift();
       perf.slow = s.dt > 70 ? perf.slow + s.dt : Math.max(0, perf.slow - s.dt * 2);
+      // Calidad adaptable: por debajo de 45 fps (22 ms) durante 2 s, se baja la densidad de píxeles a 1.
+      perf.low = s.dt > 22 ? (perf.low || 0) + s.dt : 0;
+      if (perf.low > 2000 && gl.getPixelRatio() > 1) { gl.setPixelRatio(1); perf.low = 0; invalidate(); }
       if (perf.slow > 6000 && !new URLSearchParams(window.location.search).has('gl')) useScene.getState().setFallback(true);
     }
   }, 'write');
