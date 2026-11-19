@@ -137,6 +137,13 @@ En cualquier página con escena, `window.__garage` expone:
 - `stats()` — fps y tiempo de fotograma medidos, triángulos y llamadas de dibujo.
 - `sim` — en la landing, el almacén de la simulación (`sim.setState(id, estado)`).
 
+## Rendimiento y móvil
+
+- Caché: `/assets/*` (con hash) `max-age=31536000, immutable`; HTML con revalidación; `sw.js` sin caché (`public/_headers`).
+- Escena 3D: se pausa fuera de pantalla y con la pestaña oculta; DPR 1 en móvil y ≤ 1,5 en escritorio; si baja de 45 fps durante 2 s, el DPR pasa a 1.
+- Mapa: chunk diferido; en móvil DPR ≤ 1,5, caché de 40 tiles y edificios 3D desde el zoom 15; se destruye al alejarse de la sección.
+- Móvil o táctil: sin mosaico animado ni parallax; secciones fijadas con `100svh`; safe-area en barras fijas.
+
 ## Estructura por superficies
 
 `src/surfaces/index.js` registra una entrada (chunk) por superficie para poder separarlas después en tres productos: **oficina** (panel simple; hoy `/panel` como «Oficina», con `src/surfaces/office/`), **taller** (tablero, escena y «Siguiente paso»; hoy `/panel` como mecánico, con `src/surfaces/workshop/`) y **cliente** (consulta, cita y sala de espera). Comparten `src/components`, `src/data` (DataAdapter y EmailAdapter) y `shared/`. Las pantallas separadas todavía no existen.
