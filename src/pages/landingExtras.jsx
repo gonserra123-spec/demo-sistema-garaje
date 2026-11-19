@@ -56,10 +56,11 @@ export function DemoCard({ who, n }) {
 /* ---------- Transición por píxeles entre dos secciones ---------- */
 // Un lienzo de celdas: cada celda pasa del color de arriba al de abajo cuando el progreso supera su umbral
 // (umbral = posición vertical + ruido). Resultado: el color de arriba se deshace en mosaico.
-// Móvil o pantalla táctil: sin mosaico animado ni parallax (Regla 7 en móvil); se queda un fotograma fijo.
+// Móvil o pantalla táctil: mosaico ligero (cuadrados grandes, menos redibujados) y sin parallax.
 const LIGHT = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
 const hash = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-export function PixelSeam({ from, to, cell = 22 }) {
+export function PixelSeam({ from, to, cell: cellProp = 22 }) {
+  const cell = LIGHT ? 36 : cellProp; // en móvil, versión ligera: cuadrados más grandes
   const wrap = useRef(null); const cv = useRef(null);
   const st = useRef({ p: -1, w: 0, h: 0, dpr: 1 });
   const draw = (p) => {
@@ -83,8 +84,8 @@ export function PixelSeam({ from, to, cell = 22 }) {
   useViewport(wrap, ({ rect, vh, inView }) => {
     if (!inView) return;
     // 0 cuando la franja entra por abajo, 1 cuando llega al tercio superior.
-    const p = reducedMotion || LIGHT ? 0.5 : 0.85 * clamp((vh - rect.top) / (vh * 0.75 + rect.height)); // nunca del todo: el borde de arriba queda en mosaico
-    if (Math.abs(p - st.current.p) < 0.004) return;
+    const p = reducedMotion ? 0.5 : 0.85 * clamp((vh - rect.top) / (vh * 0.75 + rect.height)); // nunca del todo: el borde de arriba queda en mosaico
+    if (Math.abs(p - st.current.p) < (LIGHT ? 0.02 : 0.004)) return; // en móvil, menos redibujados
     st.current.p = p; draw(p);
   });
   useEffect(() => { const on = () => draw(Math.max(0, st.current.p)); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
