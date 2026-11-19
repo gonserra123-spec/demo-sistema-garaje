@@ -1,0 +1,29 @@
+// Despliegue en Cloudflare Workers (demo pública). `npm run build` y luego `npx wrangler deploy`.
+// Secretos: `npx wrangler secret put RESEND_API_KEY` y `npx wrangler secret put NOTIFY_TOKEN_SECRET`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "demo-sistema-garaje",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // /panel, /consulta/* y cualquier recarga directa reciben index.html; /api/* pasa antes por el Worker.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    // FALTA: buzón de Tridom que recibe el formulario de contacto y remitente en un dominio verificado en Resend.
+    "CONTACT_TO_EMAIL": "FALTA@example.invalid",
+    "CONTACT_FROM_EMAIL": "Tridom Automotive <web@FALTA.example.invalid>",
+    // Orígenes extra admitidos además del propio (separados por comas). Vacío = solo el mismo origen.
+    "ALLOWED_ORIGINS": "",
+    // Remitente, reply-to y nombre por taller para los avisos al cliente (ver README, «Correos»).
+    "WORKSHOP_EMAIL_CONFIG": "{}"
+  },
+  "ratelimits": [
+    { "name": "CONTACT_LIMITER", "namespace_id": "4101", "simple": { "limit": 3, "period": 60 } },
+    { "name": "NOTIFY_LIMITER", "namespace_id": "4102", "simple": { "limit": 20, "period": 60 } }
+  ],
+  "observability": { "enabled": true }
+}

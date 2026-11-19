@@ -2,7 +2,7 @@
 // Cada cambio se aplica primero en local (la escena se anima al instante). Si no hay red, se guarda
 // en una cola en localStorage y se reenvía en orden al volver; el servidor ignora los repetidos (opId).
 import { create } from 'zustand';
-import { getAdapter, NetworkError } from './adapter.js';
+import { getAdapter, NetworkError, normalizeWorkshop, withTimeout } from './adapter.js';
 import { capacities, locationsFor, pickSlot, preferredLocations } from '../../shared/domain.js';
 
 const QUEUE_KEY = 'tg_queue_v1';
@@ -72,33 +72,40 @@ async function send(api, op) {
 export const usePanel = create((set, get) => ({
   status: 'boot', // boot | login | ready
   config: null, workshop: null, operator: null, sid: null,
-  vehicles: [], queue: load(QUEUE_KEY, []), online: true, live: false, toasts: [], apptTick: 0,
+  vehicles: [], queue: load(QUEUE_KEY, []), online: true, live: false, toasts: [], apptTick: 0, outboxTick: 0,
+  saving: 0, savedAt: 0, // indicador de guardado: cambios en vuelo y último guardado confirmado
 
-  toast(kind, text, vars) {
+  // `action`: { label, run } para un botón dentro del aviso (p. ej. «Deshacer»). `ms`: cuánto dura.
+  toast(kind, text, vars, { action = null, ms = 6000 } = {}) {
     const id = uuid();
-    set((s) => ({ toasts: [...s.toasts.slice(-3), { id, kind, text, vars }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 6000);
+    set((s) => ({ toasts: [...s.toasts.slice(-3), { id, kind, text, vars, action, until: Date.now() + ms }] }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms);
+    return id;
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   async boot() {
     const api = await getAdapter();
     try {
-      const [config, session] = await Promise.all([api.config(), api.session()]);
+      const [config, session] = await withTimeout(Promise.all([api.config(), api.session()]));
       set({ config, online: true });
-      if (session.ok) await get().enter(session);
+      // Solo se entra con una sesión completa: sin taller no hay nada que pintar.
+      if (session.ok && normalizeWorkshop(session.workshop)) await get().enter(session);
       else set({ status: 'login' });
     } catch (e) {
       if (!(e instanceof NetworkError)) throw e;
       // Sin red al abrir: si este dispositivo ya tenía sesión, se trabaja con la última copia.
       const snap = load(SNAP_KEY, null);
-      if (snap) { set({ status: 'ready', online: false, workshop: snap.workshop, operator: snap.operator, vehicles: snap.vehicles }); get().scheduleRetry(); }
+      const w = normalizeWorkshop(snap?.workshop);
+      if (w && Array.isArray(snap.vehicles)) { set({ status: 'ready', online: false, workshop: w, operator: snap.operator, vehicles: snap.vehicles }); get().scheduleRetry(); }
       else set({ status: 'login', online: false });
     }
   },
 
   async enter(session) {
-    set({ workshop: session.workshop, operator: session.operator, sid: session.sid || null, status: 'ready' });
+    const workshop = normalizeWorkshop(session.workshop);
+    if (!workshop) { set({ status: 'login' }); return; }
+    set({ workshop, operator: session.operator, sid: session.sid || null, status: 'ready' });
     await get().flush();
     await get().reload();
     const api = await getAdapter();
@@ -143,6 +150,7 @@ export const usePanel = create((set, get) => ({
     if (e.kind === 'down') { set({ live: false }); return; }
     if (e.kind === 'reset') { get().reload(); set((s) => ({ apptTick: s.apptTick + 1 })); return; }
     if (e.kind === 'appointments') { set((s) => ({ apptTick: s.apptTick + 1 })); return; }
+    if (e.kind === 'outbox') { set((s) => ({ outboxTick: s.outboxTick + 1 })); return; }
     const busy = new Set(get().queue.map((q) => q.id));
     if (e.kind === 'delete') { set((s) => ({ vehicles: s.vehicles.filter((v) => v.id !== e.id) })); get().persist(); return; }
     if (e.kind === 'vehicle') {
@@ -164,18 +172,20 @@ export const usePanel = create((set, get) => ({
     set({ vehicles: next });
     if (s.queue.length || !s.online) return get().enqueue(full);
     const api = await getAdapter();
+    set((st) => ({ saving: st.saving + 1 }));
     try {
-      const r = await send(api, full);
+      const r = await withTimeout(send(api, full));
       if (r.status === 401) { set({ vehicles: before, status: 'login' }); return r; }
       if (!r.ok) { set({ vehicles: before }); return r; }
       if (r.vehicle) set((st) => ({ vehicles: st.vehicles.map((v) => (v.id === r.vehicle.id ? r.vehicle : v)) }));
       if (r.conflict) get().toast('warn', 'panel.conflictMine', { who: r.conflict.by });
+      set({ savedAt: Date.now() });
       get().persist();
       return r;
     } catch (e) {
       if (!(e instanceof NetworkError)) { set({ vehicles: before }); throw e; }
       return get().enqueue(full);
-    }
+    } finally { set((st) => ({ saving: Math.max(0, st.saving - 1) })); }
   },
 
   enqueue(op) {

@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { Component, Fragment, lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { createSpring, SPRINGS } from '../lib/spring.js';
 import { useTick, useViewport, reducedMotion } from '../lib/hooks.js';
 import { useT } from '../i18n/index.jsx';
@@ -127,6 +127,31 @@ export function SceneHost({ listVehicles, onSelect, selectedId, ...props }) {
       </Suspense>
     </SceneBoundary>
   );
+}
+
+// Error boundary por superficie: si algo falla al pintar, se ve un mensaje claro y un botón para reintentar
+// (vuelve a montar la superficie) en vez de una página en blanco.
+function SurfaceError({ onRetry }) {
+  const { t } = useT();
+  return (
+    <main className="login" role="alert">
+      <div className="login-card">
+        <Wordmark />
+        <h1>{t('errors.surfaceTitle')}</h1>
+        <p>{t('errors.surfaceText')}</p>
+        <div className="part-actions"><Btn onClick={onRetry}>{t('errors.retry')}</Btn><Btn variant="ghost" to="/">{t('common.home')}</Btn></div>
+      </div>
+    </main>
+  );
+}
+export class SurfaceBoundary extends Component {
+  constructor(p) { super(p); this.state = { failed: false, n: 0 }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err) { console.error(`[${this.props.name}]`, err?.message || err); }
+  render() {
+    if (this.state.failed) return <SurfaceError onRetry={() => { this.props.onRetry?.(); this.setState((s) => ({ failed: false, n: s.n + 1 })); }} />;
+    return <Fragment key={this.state.n}>{this.props.children}</Fragment>;
+  }
 }
 
 export function Wordmark({ to = '/' }) {

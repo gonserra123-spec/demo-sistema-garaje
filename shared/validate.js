@@ -63,8 +63,15 @@ export function validateNewVehicle(input, catalog) {
   }
   const phone = normalizePhone(input.phone);
   if (phone && !isPhone(phone)) errors.phone = 'phone_format';
+  // Correo opcional para los avisos. Solo se usa si además se marca el consentimiento.
+  const email = cleanText(input.email).toLowerCase();
+  if (email && !isEmail(email)) errors.email = 'email_format';
+  if (input.notifyConsent !== undefined && typeof input.notifyConsent !== 'boolean') errors.notifyConsent = 'invalid';
   if (input.id !== undefined && !isUuid(input.id)) errors.id = 'invalid';
-  return { ok: Object.keys(errors).length === 0, errors, model, phone: phone || null, plate: normalizePlate(input.plate) };
+  return {
+    ok: Object.keys(errors).length === 0, errors, model, phone: phone || null, plate: normalizePlate(input.plate),
+    email: email || null, notifyConsent: !!email && input.notifyConsent === true,
+  };
 }
 
 export function validatePatch(input) {

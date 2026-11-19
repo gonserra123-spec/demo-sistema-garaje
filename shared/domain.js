@@ -43,3 +43,29 @@ export function pickSlot(taken, template, candidates) {
   }
   return null;
 }
+
+// «Siguiente paso» del mecánico: recibido → diagnóstico → aprobación/pieza → reparación → listo → entregado.
+// Si hay alguna pieza sin llegar, tras la aprobación toca esperar la pieza; si no, a reparar.
+export function nextState(v) {
+  const missing = (v.parts || []).some((p) => p.state !== 'arrived');
+  switch (v.state) {
+    case 'received': return 'diagnosis';
+    case 'diagnosis': return 'awaiting_approval';
+    case 'awaiting_approval': return missing ? 'awaiting_part' : 'in_repair';
+    case 'awaiting_part': return 'in_repair';
+    case 'in_repair': return 'ready';
+    case 'ready': return 'delivered';
+    default: return null;
+  }
+}
+
+// Ubicación lógica que se sugiere (y se asigna en el mismo toque) al pasar a `state`.
+// En reparación: el elevador o foso libre (se queda donde está si ya es uno). Listo: zona de recogida.
+// `vehicles` son los coches del taller; se ignora el propio. Devuelve { location, slot } o null.
+export function suggestPlace(state, template, vehicles, self) {
+  if (state === 'delivered') return null;
+  const taken = new Set(vehicles.filter((o) => o.id !== self.id && o.location).map((o) => `${o.location}:${o.slot}`));
+  const prefs = preferredLocations(state, template, self.location);
+  if (prefs.includes(self.location) && !taken.has(`${self.location}:${self.slot}`)) return { location: self.location, slot: self.slot };
+  return pickSlot(taken, template, [...prefs, 'parking', 'waiting', 'reception']);
+}

@@ -4,7 +4,7 @@ import { isVehicleCode, plateError } from '../../shared/validate.js';
 import { normalizePlate } from '../../shared/plates.js';
 import { useT, LangSwitch } from '../i18n/index.jsx';
 import { Btn, Field, Link, Plate, SceneHost, StateChip, Wordmark } from '../components/ui.jsx';
-import { getAdapter, NetworkError } from '../data/adapter.js';
+import { getAdapter, NetworkError, normalizeWorkshop, withTimeout } from '../data/adapter.js';
 import { useScene } from '../scene/store.js';
 
 const MINE = 'mine';
@@ -23,11 +23,18 @@ export default function Consulta({ code }) {
   const ready = useScene((s) => s.ready);
   const heading = useRef(null);
 
+  // Carga del taller con tiempo máximo: si no responde, se ve un error legible con «Reintentar».
+  const [loadErr, setLoadErr] = useState(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
-    getAdapter().then((api) => api.publicWorkshop(code)).then((r) => { if (alive) setWorkshop(r.ok ? r.workshop : null); }).catch(() => { if (alive) setWorkshop(null); });
-    return () => { alive = false; useScene.getState().reset(); };
-  }, [code]);
+    setLoadErr(null); setWorkshop(undefined);
+    withTimeout(getAdapter().then((api) => api.publicWorkshop(code)), 8000)
+      .then((r) => { if (alive) setWorkshop(r.ok && r.workshop ? normalizeWorkshop(r.workshop) : null); })
+      .catch((err) => { if (alive) setLoadErr(err instanceof NetworkError ? 'network' : 'generic'); });
+    return () => { alive = false; };
+  }, [code, attempt]);
+  useEffect(() => () => useScene.getState().reset(), [code]);
 
   // Solo llega al navegador el DTO de ese coche; de los demás, la plaza que ocupan.
   useEffect(() => {
@@ -72,7 +79,7 @@ export default function Consulta({ code }) {
     setBusy(true); setError(null);
     try {
       const api = await getAdapter();
-      const r = await api.publicLookup({ code, plate: normalizePlate(plate), website });
+      const r = await withTimeout(api.publicLookup({ code, plate: normalizePlate(plate), website }));
       if (r.ok) { setResult({ token: r.token, vehicle: r.vehicle, others: r.others }); setCost(null); setLast4(''); setVerifyErr(null); requestAnimationFrame(() => heading.current?.focus()); }
       else setError(r.status === 429 ? 'rate_limited' : 'not_available');
     } catch (err) { setError(err instanceof NetworkError ? 'network' : 'not_available'); }
@@ -83,7 +90,7 @@ export default function Consulta({ code }) {
     if (!/^\d{4}$/.test(last4)) { setVerifyErr('last4_format'); return; }
     setVerifyErr(null);
     try {
-      const api = await getAdapter(); const r = await api.publicVerify({ token: result.token, last4 });
+      const api = await getAdapter(); const r = await withTimeout(api.publicVerify({ token: result.token, last4 }));
       if (r.ok) setCost(r.cost); else setVerifyErr(r.status === 429 ? 'rate_limited' : 'not_available');
     } catch { setVerifyErr('network'); }
   };
@@ -100,7 +107,13 @@ export default function Consulta({ code }) {
         <span className="grow" />
         <LangSwitch />
       </header>
-      {workshop === undefined && <p className="scene-loading" role="status">{t('common.loading')}</p>}
+      {loadErr && (
+        <main className="consulta-side" role="alert">
+          <p className="notice notice--error">{t(`errors.${loadErr}`)}</p>
+          <div className="part-actions"><Btn onClick={() => setAttempt((n) => n + 1)}>{t('errors.retry')}</Btn><Link to="/">{t('common.home')}</Link></div>
+        </main>
+      )}
+      {workshop === undefined && !loadErr && <p className="scene-loading" role="status">{t('common.loading')}</p>}
       {workshop === null && <main className="consulta-side"><p className="notice notice--error">{t('consulta.unknownWorkshop')}</p><Link to="/">{t('common.home')}</Link></main>}
       {workshop && (
         <main className="consulta-main">

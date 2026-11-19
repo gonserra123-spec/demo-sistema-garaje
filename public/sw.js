@@ -1,6 +1,6 @@
 // Service worker del panel (PWA): guarda la carcasa de la app para abrirla sin conexión.
 // Nunca cachea /api: los datos del taller solo viven en la cola y la copia del propio panel.
-const CACHE = 'tg-shell-v1';
+const CACHE = 'tg-shell-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/favicon.svg', '/manifest.webmanifest'])).then(() => self.skipWaiting()));

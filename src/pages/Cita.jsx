@@ -6,7 +6,7 @@ import { plateError } from '../../shared/validate.js';
 import { normalizePlate } from '../../shared/plates.js';
 import { useT, LangSwitch } from '../i18n/index.jsx';
 import { Btn, Field, Link, Plate, Wordmark } from '../components/ui.jsx';
-import { getAdapter, NetworkError } from '../data/adapter.js';
+import { getAdapter, NetworkError, withTimeout } from '../data/adapter.js';
 
 const EMPTY = { plate: '', email: '', phone: '', date: '', slot: '', reason: '', modelId: '', make: '', model: '', bodyType: '', consent: false, website: '' };
 
@@ -23,11 +23,16 @@ export default function Cita({ code }) {
   const [done, setDone] = useState(null);
   const form = useRef(null);
 
+  const [loadErr, setLoadErr] = useState(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let off = false;
-    getAdapter().then((a) => a.publicWorkshop(code)).then((r) => { if (!off) setWorkshop(r.ok ? r.workshop : null); }).catch(() => { if (!off) setWorkshop(null); });
+    setLoadErr(null); setWorkshop(undefined);
+    withTimeout(getAdapter().then((a) => a.publicWorkshop(code)), 8000)
+      .then((r) => { if (!off) setWorkshop(r.ok && r.workshop ? r.workshop : null); })
+      .catch((err) => { if (!off) setLoadErr(err instanceof NetworkError ? 'network' : 'generic'); });
     return () => { off = true; };
-  }, [code]);
+  }, [code, attempt]);
 
   const set = (k) => (e) => setV((s) => ({ ...s, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
   const today = todayIso();
@@ -65,6 +70,7 @@ export default function Cita({ code }) {
 
   const reset = () => { setKnown(null); setErrors({}); setV((s) => ({ ...EMPTY, plate: s.plate })); };
 
+  if (loadErr) return <main className="login" role="alert"><div className="login-card"><Wordmark /><p className="notice notice--error">{t(`errors.${loadErr}`)}</p><Btn onClick={() => setAttempt((n) => n + 1)}>{t('errors.retry')}</Btn></div></main>;
   if (workshop === undefined) return <p className="scene-loading" role="status">{t('common.loading')}</p>;
   if (workshop === null) return <main className="login"><div className="login-card"><Wordmark /><p className="notice notice--error">{t('consulta.unknownWorkshop')}</p></div></main>;
 

@@ -127,8 +127,8 @@ function freeSlot(wid, location, exceptId) {
 
 // Lo que ve el panel: nunca el teléfono completo.
 export function panelDto(v) {
-  const { phone, workshopId, lastSession, ...rest } = v;
-  return { ...rest, hasPhone: !!phone, phoneLast4: phone ? phone.slice(-4) : null };
+  const { phone, email, workshopId, lastSession, ...rest } = v;
+  return { ...rest, hasPhone: !!phone, phoneLast4: phone ? phone.slice(-4) : null, hasEmail: !!email, emailMasked: email ? `${email[0]}***@${email.split('@')[1]}` : null, notify: !!email && !!v.notifyConsent };
 }
 export const listVehicles = (wid) => ofWorkshop(wid).sort((a, b) => a.enteredAt.localeCompare(b.enteredAt)).map(panelDto);
 
@@ -150,7 +150,7 @@ export function createVehicle(wid, session, data) {
     modelId: m ? m.id : null, make: m ? m.make : cleanText(data.make), model: m ? m.model : cleanText(data.modelName),
     bodyType: m ? m.body : data.bodyType, dims: m ? { l: m.l, w: m.w, h: m.h } : null,
     publicCode: newCode(), tags: [],
-    phone: data.phone, state: 'received', location, slot, notes: '', costEstimate: null, costFinal: null,
+    phone: data.phone, email: data.email || null, notifyConsent: !!data.notifyConsent, state: 'received', location, slot, notes: '', costEstimate: null, costFinal: null,
     enteredAt: now, etaAt: null, deliveredAt: null, parts: [],
     history: [{ at: now, by: session.operator, type: 'created', to: 'received' }],
     rev: 1, updatedAt: now, lastSession: session.sid, lastBy: session.operator,

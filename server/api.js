@@ -225,7 +225,7 @@ async function panel(req, res, path, method) {
     const v = validateNewVehicle(body, store.CATALOG);
     if (!v.ok) return send(res, 422, { ok: false, error: 'validation', errors: v.errors });
     return remember(store.createVehicle(wid, session, {
-      id: body.id, plate: v.plate, plateKind: classifyPlate(v.plate), model: v.model, make: body.make, modelName: body.model, bodyType: body.bodyType, phone: v.phone,
+      id: body.id, plate: v.plate, plateKind: classifyPlate(v.plate), model: v.model, make: body.make, modelName: body.model, bodyType: body.bodyType, phone: v.phone, email: v.email, notifyConsent: v.notifyConsent,
     }), 201);
   }
   if (path === '/customers/import' && method === 'POST') {

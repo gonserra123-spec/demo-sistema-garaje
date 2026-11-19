@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import catalog from '../../shared/models.json';
 import fullTemplate from '../../shared/template.json';
-import { BODY_TYPES, OPERATORS, STATES, capacities, locationsFor } from '../../shared/domain.js';
+import { BODY_TYPES, OPERATORS, capacities, locationsFor } from '../../shared/domain.js';
 import { costError, dateError, freeTextError, isPin, parseCost, validateNewVehicle } from '../../shared/validate.js';
 import { useT, LangSwitch } from '../i18n/index.jsx';
 import { Btn, Field, Plate, SceneHost, StateChip, Wordmark } from '../components/ui.jsx';
@@ -11,6 +11,8 @@ import { useScene } from '../scene/store.js';
 import { isOverdue } from '../lib/days.js';
 import { Appointments, Customers } from './panelCitas.jsx';
 import { AlbaranBlock, DaySummary, EtaBlock, Settings, TagsBlock, recalledLogin, rememberLogin, summaryOf, useOnceFlag } from './panelParts.jsx';
+import { NextStep, SaveStatus } from '../surfaces/workshop/NextStep.jsx';
+import { Outbox, useOutbox } from '../surfaces/office/Outbox.jsx';
 
 const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -64,7 +66,7 @@ function Login() {
 function NewCar({ onDone }) {
   const { t } = useT();
   const mutate = usePanel((s) => s.mutate);
-  const [v, setV] = useState({ plate: '', foreign: false, query: '', modelId: '', make: '', model: '', bodyType: '', phone: '' });
+  const [v, setV] = useState({ plate: '', foreign: false, query: '', modelId: '', make: '', model: '', bodyType: '', phone: '', email: '', notifyConsent: false });
   const [errors, setErrors] = useState({});
   const [open, setOpen] = useState(false);
   const [fail, setFail] = useState(null);
@@ -77,16 +79,16 @@ function NewCar({ onDone }) {
   const pick = (m) => { setV((s) => ({ ...s, modelId: m ? m.id : 'other', query: m ? `${m.make} ${m.model}` : t('panel.form.other') })); setOpen(false); };
   const submit = async (e) => {
     e.preventDefault(); setFail(null);
-    const input = { id: crypto.randomUUID(), plate: v.plate, foreign: v.foreign, phone: v.phone, ...(v.modelId && v.modelId !== 'other' ? { modelId: v.modelId } : { modelId: 'other', make: v.make, model: v.model, bodyType: v.bodyType }) };
+    const input = { id: crypto.randomUUID(), plate: v.plate, foreign: v.foreign, phone: v.phone, email: v.email.trim(), notifyConsent: v.notifyConsent, ...(v.modelId && v.modelId !== 'other' ? { modelId: v.modelId } : { modelId: 'other', make: v.make, model: v.model, bodyType: v.bodyType }) };
     const r = validateNewVehicle(input, catalog);
     const errs = { ...r.errors };
     if (!v.modelId) errs.modelId = 'required';
     setErrors(errs);
     if (Object.keys(errs).length) { requestAnimationFrame(() => form.current?.querySelector('[aria-invalid="true"]')?.focus()); return; }
     const m = r.model;
-    const local = { id: input.id, plate: r.plate, modelId: m ? m.id : null, make: m ? m.make : v.make.trim(), model: m ? m.model : v.model.trim(), bodyType: m ? m.body : v.bodyType, dims: m ? { l: m.l, w: m.w, h: m.h } : null, hasPhone: !!r.phone, phoneLast4: r.phone ? r.phone.slice(-4) : null };
+    const local = { id: input.id, plate: r.plate, modelId: m ? m.id : null, make: m ? m.make : v.make.trim(), model: m ? m.model : v.model.trim(), bodyType: m ? m.body : v.bodyType, dims: m ? { l: m.l, w: m.w, h: m.h } : null, hasPhone: !!r.phone, phoneLast4: r.phone ? r.phone.slice(-4) : null, hasEmail: !!r.email, emailMasked: r.email ? `${r.email[0]}***@${r.email.split('@')[1]}` : null, notify: r.notifyConsent };
     try {
-      const res = await mutate({ type: 'create', id: input.id, input: { ...input, plate: r.plate, phone: r.phone || undefined }, local });
+      const res = await mutate({ type: 'create', id: input.id, input: { ...input, plate: r.plate, phone: r.phone || undefined, email: r.email || undefined, notifyConsent: r.notifyConsent }, local });
       if (res.ok) onDone(input.id);
       else if (res.errors) setErrors(res.errors);
       else setFail(['plate_exists', 'workshop_full', 'rate_limited'].includes(res.error) ? res.error : 'generic');
@@ -129,6 +131,10 @@ function NewCar({ onDone }) {
       <Field label={t('panel.form.phone')} optional hint={t('panel.form.phoneHint')} error={errors.phone}>
         {(a) => <input className="input" type="tel" inputMode="tel" autoComplete="off" maxLength={20} value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} {...a} />}
       </Field>
+      <Field label={t('panel.form.email')} optional hint={t('panel.form.emailHint')} error={errors.email}>
+        {(a) => <input className="input" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off" maxLength={254} value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} {...a} />}
+      </Field>
+      <label className="check"><input type="checkbox" checked={v.notifyConsent} disabled={!v.email.trim()} onChange={(e) => setV({ ...v, notifyConsent: e.target.checked })} /><span>{t('panel.form.consent')}<small className="hint check-note">{t('panel.form.consentNote')}</small></span></label>
       {fail && <p className="notice notice--error" role="alert">{t(`errors.${fail}`)}</p>}
       <Btn type="submit" variant="block">{t('panel.form.submit')}</Btn>
     </form>
@@ -205,12 +211,7 @@ function Detail({ v, onBack }) {
       {v.pending && <p className="notice notice--warn">{t('panel.pendingSync')}</p>}
       {fail && <p className="notice notice--error" role="alert">{t(`errors.${fail}`)}</p>}
 
-      <section className="block" aria-labelledby="h-state">
-        <h3 id="h-state">{t('panel.detail.state')}</h3>
-        <div className="choices" role="group" aria-labelledby="h-state">
-          {STATES.map((s) => <button key={s} type="button" className="choice" aria-pressed={v.state === s} onClick={() => v.state !== s && run({ type: 'patch', id: v.id, patch: { state: s } })}>{t(`states.${s}`)}</button>)}
-        </div>
-      </section>
+      <NextStep v={v} run={run} />
 
       {v.state !== 'delivered' && (
         <section className="block" aria-labelledby="h-loc">
@@ -272,6 +273,7 @@ function Detail({ v, onBack }) {
       <section className="block" aria-labelledby="h-data">
         <h3 id="h-data">{t('panel.detail.data')}</h3>
         <p className="hint">{v.hasPhone ? `${t('panel.detail.phone')}: ${t('panel.detail.phoneMasked', { last4: v.phoneLast4 })}` : t('panel.detail.noPhone')}</p>
+        <p className="hint">{v.hasEmail ? `${t('panel.form.email')}: ${v.emailMasked} · ${t(v.notify ? 'panel.detail.notifyOn' : 'panel.detail.notifyOff')}` : t('panel.detail.noEmail')}</p>
         <div className="part-actions">
           <Btn variant="ghost sm" onClick={exportData}>{t('panel.detail.export')}</Btn>
           <Btn variant="danger sm" onClick={remove}>{confirm ? t('panel.detail.removeConfirm') : t('panel.detail.remove')}</Btn>
@@ -286,14 +288,21 @@ function Toasts() {
   const { toasts, dismissToast } = usePanel();
   return (
     <div className="toasts" aria-live="polite">
-      {toasts.map((x) => <div className="toast" key={x.id} data-kind={x.kind}><span>{t(x.text, x.vars && { ...x.vars, who: x.vars.who ? t(`operators.${x.vars.who}`) : undefined })}</span><button type="button" onClick={() => dismissToast(x.id)} aria-label={t('common.close')}>×</button></div>)}
+      {toasts.map((x) => (
+        <div className="toast" key={x.id} data-kind={x.kind}>
+          <span>{t(x.text, x.vars && { ...x.vars, who: x.vars.who ? t(`operators.${x.vars.who}`) : undefined })}</span>
+          {x.action && <button type="button" className="toast-act" onClick={() => { dismissToast(x.id); x.action.run(); }}>{t(x.action.label)}</button>}
+          <button type="button" onClick={() => dismissToast(x.id)} aria-label={t('common.close')}>×</button>
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function Panel() {
   const { t, date } = useT();
-  const { status, boot, vehicles, workshop, operator, online, queue, logout, config } = usePanel();
+  const { status, boot, vehicles, workshop, operator, logout, config } = usePanel();
+  const [mails] = useOutbox();
   const selectedId = useScene((s) => s.selectedId);
   const [view, setView] = useState('list'); // list | new | settings
   const [from, setFrom] = useState(null); // 'settings' si el coche se abrió desde el historial
@@ -301,7 +310,9 @@ export default function Panel() {
   const [tab, setTab] = useState('list');
   const [hint, hideHint] = useOnceFlag('tg_hint_select_v1');
 
-  useEffect(() => { boot(); return () => useScene.getState().reset(); }, []);
+  // Un fallo inesperado al arrancar no deja la pantalla en blanco: se ve un error con «Reintentar».
+  const start = () => { usePanel.setState({ status: 'boot' }); boot().catch((e) => { console.error('[panel]', e?.message || e); usePanel.setState({ status: 'error' }); }); };
+  useEffect(() => { start(); return () => useScene.getState().reset(); }, []);
   useEffect(() => { if (status === 'ready') useScene.getState().setData(vehicles); }, [vehicles, status]);
 
   const select = (id, origin = null) => {
@@ -314,6 +325,7 @@ export default function Panel() {
   };
   const template = useMemo(() => (workshop ? { ...fullTemplate, lifts: workshop.template.lifts, pit: workshop.template.pit } : null), [workshop]);
   if (status === 'boot') return <p className="scene-loading" role="status">{t('common.loading')}</p>;
+  if (status === 'error') return <main className="login" role="alert"><div className="login-card"><Wordmark /><h1>{t('errors.surfaceTitle')}</h1><p>{t('errors.surfaceText')}</p><Btn onClick={start}>{t('errors.retry')}</Btn></div></main>;
   if (status === 'login') return <Login />;
 
   const selected = vehicles.find((v) => v.id === selectedId) || null;
@@ -328,8 +340,9 @@ export default function Panel() {
         <span className="who"><strong>{workshop.name}</strong> · {t(`operators.${operator}`)}</span>
         {config?.demo && <span className="demo-tag" title={t('common.demoNote')}>{t('common.demo')}</span>}
         <span className="grow" />
-        <span className="net" data-off={!online || queue.length > 0} role="status">{online && !queue.length ? t('panel.online') : `${t('panel.offline')}${queue.length ? ` · ${t('panel.offlineQueue', { n: String(queue.length) })}` : ''}`}</span>
+        <SaveStatus />
         <LangSwitch />
+        <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setFrom(null); setView('outbox'); setTab('list'); }}>{t('panel.outbox.nav')}{mails.length > 0 && <span className="mini-tag">{mails.length}</span>}</Btn>
         <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setFrom(null); setView('customers'); setTab('list'); }}>{t('panel.customers.nav')}</Btn>
         <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setFrom(null); setView('settings'); setTab('list'); }}>{t('panel.settings.title')}</Btn>
         <Btn variant="ghost sm" onClick={() => { useScene.getState().select(null); setStat(null); setFrom(null); setView('list'); logout(); }}>{t('panel.logout')}</Btn>
@@ -347,6 +360,7 @@ export default function Panel() {
             {selected ? <Detail v={selected} onBack={() => select(null)} />
               : view === 'new' ? <NewCar onDone={(id) => { setView('list'); if (id) select(id); }} />
                 : view === 'customers' ? <Customers onBack={() => setView('list')} />
+                : view === 'outbox' ? <Outbox onBack={() => setView('list')} />
                 : view === 'settings' ? <Settings onBack={() => setView('list')} onOpen={(id) => select(id, 'settings')} />
                   : (
                     <>
