@@ -178,6 +178,9 @@ export function MapSection() {
         .then(({ createMap }) => createMap(holder.current, { ...camAt(Math.min(target.current, 0.74)), marker: [LOCATION.lng, LOCATION.lat], markerLabel: t('landing.map.demoTag'), lang }))
         .then((m) => { if (!started.current) { m.map.remove(); return; } api.current = m; setStatus('ready'); })
         .catch(() => { started.current = false; setStatus('failed'); });
+    } else if (started.current && !near && !api.current) {
+      started.current = false; // carga en curso que ya no hace falta: al resolverse se elimina (ver .then)
+      setStatus('idle');
     } else if (started.current && !near && api.current) {
       // Lejos de la sección: se destruye la instancia (libera GPU y memoria); al volver se crea otra.
       try { api.current.map.remove(); } catch { /* ya eliminado */ }
@@ -186,7 +189,7 @@ export function MapSection() {
   }, mode === 'fly');
 
   useEffect(() => { api.current?.setLabel(t('landing.map.demoTag')); }, [lang]);
-  useEffect(() => () => { try { api.current?.map.remove(); } catch { /* ya eliminado */ } }, []);
+  useEffect(() => () => { started.current = false; try { api.current?.map.remove(); } catch { /* ya eliminado */ } api.current = null; }, []);
 
   useTick((s) => {
     const sp = spring.current; sp.set(target.current);

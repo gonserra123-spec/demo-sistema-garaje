@@ -83,7 +83,8 @@ function Bridge({ template, name, brandColor, mode, interactive, onSelect, onRea
 
   useTick((s) => {
     const { engine, rig, perf } = ref.current;
-    if (!engine || !onScreen.current || document.hidden) return;
+    if (!engine) return;
+    if (!onScreen.current || document.hidden) { perf.low = 0; perf.slow = 0; return; } // en pausa no cuenta como lento
     const dt = s.dt / 1000;
     if (simulate && sim && !reducedMotion) sim.tick(Math.min(0.05, dt) * engine.timeScale, engine);
     const a = engine.update(dt);
