@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { MAT, COLORS, PIT_DEPTH } from './world.js';
 import { angleDiff, headingOf } from './paths.js';
+import { CREW_SPEED } from './speed.js';
 
 const hull = new THREE.MeshBasicMaterial({ color: COLORS.blue900, side: THREE.BackSide });
 
@@ -23,7 +24,8 @@ const POSES = {
 };
 
 // Giro suavizado con velocidad angular máxima (sin volantazos al cambiar de tramo).
-const turn = (d, dt) => Math.max(-5.5 * dt, Math.min(5.5 * dt, d * Math.min(1, dt * 9)));
+const W = 5.5 * CREW_SPEED;
+const turn = (d, dt) => Math.max(-W * dt, Math.min(W * dt, d * Math.min(1, dt * 9)));
 
 export function createMechanic(id, home) {
   const root = new THREE.Group();
@@ -79,8 +81,8 @@ export function createMechanic(id, home) {
     let moving = false;
     if (m.path) {
       const remain = m.path.len - m.s;
-      const vmax = 1.45;
-      m.speed = Math.min(vmax, m.speed + 3 * dt, Math.sqrt(2 * 2.4 * Math.max(0, remain)) + 0.08);
+      const vmax = 1.45 * CREW_SPEED;
+      m.speed = Math.min(vmax, m.speed + 3 * CREW_SPEED * dt, Math.sqrt(2 * 2.4 * CREW_SPEED * Math.max(0, remain)) + 0.08);
       m.s = Math.min(m.path.len, m.s + m.speed * dt);
       const seg = m.path.segs.find((sg) => m.s <= sg.s0 + sg.l) || m.path.segs[m.path.segs.length - 1];
       const t = seg.l ? Math.min(1, (m.s - seg.s0) / seg.l) : 1;
@@ -105,7 +107,7 @@ export function createMechanic(id, home) {
       to('hipL', 0); to('hipR', 0); to('knL', 0); to('knR', 0);
       if (wob) moving = true;
     } else {
-      const sw = Math.sin(m.phase); const amp = Math.min(1, m.speed / 1.2);
+      const sw = Math.sin(m.phase); const amp = Math.min(1, m.speed / (1.2 * CREW_SPEED));
       to('lean', 0.06); to('hipL', sw * 0.55 * amp); to('hipR', -sw * 0.55 * amp);
       to('knL', -Math.max(0, -sw) * 0.75 * amp); to('knR', -Math.max(0, sw) * 0.75 * amp);
       to('shL', -sw * 0.45 * amp); to('shR', sw * 0.45 * amp); to('elL', 0.35); to('elR', 0.35);

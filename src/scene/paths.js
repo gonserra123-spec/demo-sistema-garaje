@@ -1,5 +1,6 @@
 // Geometría del suelo: plazas, red de carriles y rutas con esquinas redondeadas.
 // Convención: x al este, z al sur. Rumbo θ con el frente del coche en (cos θ, −sin θ).
+import { CAR_SPEED } from './speed.js';
 
 export const headingOf = (dx, dz) => Math.atan2(-dz, dx);
 export const angleDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -87,11 +88,11 @@ export function samplePath(path, s) {
 }
 
 // Velocidad máxima permitida en cada muestra: límite por curva y frenada hasta parar al final.
-function speedEnvelope(path, vmax, accel) {
+function speedEnvelope(path, vmax, accel, vcurve = 1.9 * CAR_SPEED) {
   const a = path.samples; const env = new Float32Array(a.length);
   env[a.length - 1] = 0;
   for (let i = a.length - 2; i >= 0; i -= 1) {
-    const curve = a[i].k ? Math.min(vmax, 1.9) : vmax;
+    const curve = a[i].k ? Math.min(vmax, vcurve) : vmax;
     env[i] = Math.min(curve, Math.sqrt(env[i + 1] ** 2 + 2 * accel * (a[i + 1].s - a[i].s)));
   }
   path.env = env;
@@ -123,7 +124,7 @@ export function planRoute(layout, from, to) {
     const g = { x: A.foot.x - t.x * back, z: A.foot.z - t.z * back };
     const leg = filletPath([{ x: from.x, z: from.z }, A.foot, g]);
     leg.reverse = true;
-    speedEnvelope(leg, 1.5, 1.1);
+    speedEnvelope(leg, 1.5 * CAR_SPEED, 1.1 * CAR_SPEED);
     legs.push(leg);
     start = g;
   }
@@ -131,7 +132,7 @@ export function planRoute(layout, from, to) {
   if (to !== 'despawn') fwd.push({ x: to.x, z: to.z });
   const leg = filletPath(fwd);
   leg.reverse = false;
-  speedEnvelope(leg, 3.4, 1.5);
+  speedEnvelope(leg, 3.4 * CAR_SPEED, 1.5 * CAR_SPEED);
   legs.push(leg);
   const regions = new Set([A.region, B.region]);
   return { legs, regions: [...regions] };

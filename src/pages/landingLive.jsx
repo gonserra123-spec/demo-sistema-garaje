@@ -5,6 +5,7 @@ import { Btn, Plate, Reveal, StateChip } from '../components/ui.jsx';
 import { useTick, useViewport, reducedMotion } from '../lib/hooks.js';
 import { createSpring, SPRINGS } from '../lib/spring.js';
 import { useLiveCars, locationOf } from '../lib/liveDemo.js';
+import { AudienceTag, BlueprintGrid } from './landingExtras.jsx';
 
 // Tablero del taller y móvil del cliente, sincronizados: lo que se toca a la izquierda lo lee el cliente a la derecha.
 export function LiveShop() {
@@ -15,16 +16,20 @@ export function LiveShop() {
   const sel = cars[idx];
   const step = STATES.indexOf(sel.state);
   return (
-    <section className="section--dark on-dark live" id="live" data-tone="dark">
+    <section className="section--dark on-dark live demo-sec" id="demo-equipo" data-tone="dark" aria-labelledby="demo1-title">
       <div className="wrap">
-        <div className="sec-head">
-          <Reveal className="h-section" lines={t('landing.live.title')} />
-          <p className="lead">{t('landing.live.lead')}</p>
+        <div className="sec-head demo-head">
+          <p className="demo-eyebrow"><span>{t('landing.demos.label', { n: '1' })} · {t('landing.demos.team.for')}</span><AudienceTag who="team" /></p>
+          <Reveal className="h-section" id="demo1-title" lines={t('landing.demos.team.headline')} />
+          <p className="lead">{t('landing.demos.team.explain')}</p>
+          <div className="demo-cta"><Btn to="/panel" variant="light">{t('landing.demos.team.open')}</Btn><span className="hint">{t('landing.demos.team.pin')}</span></div>
         </div>
+        <p className="live-intro">{t('landing.live.lead')}</p>
         <div className="live-grid">
           <div className="tablet" role="group" aria-label={t('landing.live.tablet')}>
+            <p className="screen-label"><span>{t('landing.live.tablet')}</span><AudienceTag who="team" /></p>
             <div className="mock-head">
-              <strong className="tablet-name">{t('landing.live.tablet')}</strong>
+              <strong className="tablet-name">{t('landing.live.board')}</strong>
               <span className="net">{t('panel.live')}</span>
               <span className="demo-tag">{t('common.demo')}</span>
             </div>
@@ -56,6 +61,7 @@ export function LiveShop() {
           </div>
 
           <div className="live-phone-col">
+            <p className="screen-label"><span>{t('landing.live.phone')}</span><AudienceTag who="customer" /></p>
             <div className="phone phone--live" role="group" aria-label={t('landing.live.phone')}>
               <div className="phone-top"><span className="phone-notch" aria-hidden="true" /></div>
               <div className="mock-head"><div><span className="hint">{t('landing.customer.cardPlate')}</span><br /><Plate value={sel.plate} /></div><span className="demo-tag">{t('common.demo')}</span></div>
@@ -102,12 +108,16 @@ export function Calc() {
   const [calls, setCalls] = useState(10);
   const [mins, setMins] = useState(4);
   const [rate, setRate] = useState(40);
+  const [avoid, setAvoid] = useState(50); // estimación del propio taller, no una promesa
   const DAYS = 22;
   const hours = (calls * mins * DAYS) / 60;
   const euros = hours * rate;
+  const avoidHours = (hours * avoid) / 100;
+  const avoidEuros = (euros * avoid) / 100;
   const nf = (o) => new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-GB', o);
   return (
     <section className="section calc" id="calc" data-tone="light">
+      <BlueprintGrid />
       <div className="wrap split">
         <div>
           <div className="sec-head">
@@ -118,6 +128,8 @@ export function Calc() {
             <Slider label={t('landing.calc.calls')} value={calls} onChange={setCalls} min={0} max={40} />
             <Slider label={t('landing.calc.mins')} value={mins} onChange={setMins} min={1} max={10} unit=" min" />
             <Slider label={t('landing.calc.rate')} value={rate} onChange={setRate} min={20} max={90} step={5} unit=" €" />
+            <Slider label={t('landing.calc.avoid')} value={avoid} onChange={setAvoid} min={0} max={100} step={5} unit=" %" />
+            <p className="hint calc-est">{t('landing.calc.avoidNote')}</p>
           </div>
         </div>
         <div className="calc-out" aria-live="polite">
@@ -125,6 +137,16 @@ export function Calc() {
           <p className="calc-big"><Num value={hours} format={(v) => nf({ maximumFractionDigits: 0 }).format(v)} /><small>{t('landing.calc.hours')}</small></p>
           <p className="calc-big calc-big--blue"><Num value={euros} format={(v) => nf({ maximumFractionDigits: 0 }).format(v)} /><small>{t('landing.calc.money')}</small></p>
           <p className="calc-eq">{t('landing.calc.eq', { n: nf({ maximumFractionDigits: 1 }).format(hours / 8) })}</p>
+          <div className="calc-avoid">
+            <p className="sign calc-kicker">{t('landing.calc.avoidResult', { p: String(avoid) })}</p>
+            <p className="calc-mid"><Num value={avoidHours} format={(v) => nf({ maximumFractionDigits: 0 }).format(v)} /><small>{t('landing.calc.hours')}</small><Num value={avoidEuros} format={(v) => nf({ maximumFractionDigits: 0 }).format(v)} /><small>{t('landing.calc.money')}</small></p>
+          </div>
+          <div className="calc-formula">
+            <p className="sign calc-kicker">{t('landing.calc.formulaTitle')}</p>
+            <p><code>{t('landing.calc.f1', { c: String(calls), m: String(mins), d: String(DAYS), h: nf({ maximumFractionDigits: 1 }).format(hours) })}</code></p>
+            <p><code>{t('landing.calc.f2', { h: nf({ maximumFractionDigits: 1 }).format(hours), r: String(rate), e: nf({ maximumFractionDigits: 0 }).format(euros) })}</code></p>
+            <p><code>{t('landing.calc.f3', { e: nf({ maximumFractionDigits: 0 }).format(euros), p: String(avoid), a: nf({ maximumFractionDigits: 0 }).format(avoidEuros) })}</code></p>
+          </div>
           <p className="hint">{t('landing.calc.note', { d: String(DAYS) })}</p>
         </div>
       </div>

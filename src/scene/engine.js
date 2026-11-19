@@ -7,6 +7,7 @@ import { buildWorld, MAT, COLORS, LIFT_TOP, PIT_DEPTH } from './world.js';
 import { carParts } from './carGeometry.js';
 import { createMechanic } from './mechanic.js';
 import { isLift } from '../../shared/domain.js';
+import { CAR_SPEED, CREW_SPEED } from './speed.js';
 
 const WALK_Z = 9.4;
 const OUT_Z = 20.3;
@@ -219,7 +220,7 @@ export function createEngine({ template, name, brandColor, lang = 'es', mode = '
   function updateCar(car, dt) {
     if (car.phase === 'drive') {
       const leg = car.route.legs[car.leg];
-      car.spd = Math.min(envelopeAt(leg, car.s), car.spd + (leg.reverse ? 1.1 : 1.5) * dt);
+      car.spd = Math.min(envelopeAt(leg, car.s), car.spd + (leg.reverse ? 1.1 : 1.5) * CAR_SPEED * dt);
       car.s += car.spd * dt;
       car.spinA += ((leg.reverse ? -1 : 1) * car.spd * dt) / car.P.wr;
       if (car.s >= leg.length) {
@@ -240,7 +241,7 @@ export function createEngine({ template, name, brandColor, lang = 'es', mode = '
       const p = samplePath(leg, car.s);
       car.x = p.x; car.z = p.z; car.h = leg.reverse ? p.h + Math.PI : p.h;
       const st = (leg.reverse ? 1 : -1) * Math.atan(car.P.wheelbase * p.k);
-      car.steer += (st - car.steer) * Math.min(1, dt * 5);
+      car.steer += (st - car.steer) * Math.min(1, dt * 5 * CAR_SPEED);
       return true;
     }
     let active = false;
@@ -265,7 +266,7 @@ export function createEngine({ template, name, brandColor, lang = 'es', mode = '
     if (!car.anon && car.v.state === 'ready' && !car.readyAck) {
       car.readyT += dt;
       if (job && job.type === 'handover' && job.car === car && mech.arrived && mech.goalKey === job.key) car.handT += dt;
-      if (car.handT > 3.2 || car.readyT > 30) car.readyAck = true;
+      if (car.handT > 3.2 / CREW_SPEED || car.readyT > 30) car.readyAck = true;
       active = true;
     }
     return active;
@@ -380,8 +381,10 @@ export function createEngine({ template, name, brandColor, lang = 'es', mode = '
     }
     for (const car of [...cars.values()]) if (updateCar(car, dt)) active = true;
     for (const l of Object.values(lifts)) {
+      // Elevador arriba sin coche (el que tenía se borró o salió de los datos): baja solo, con el mecánico apartado.
+      if (l.target > 0 && !slotOwner.has(`${l.key}:0`) && (mech.inPit() || Math.hypot(mech.x - l.x, mech.z - l.z) > 1.7)) l.target = 0;
       if (Math.abs(l.target - l.h) > 0.0005 || Math.abs(l.st.v) > 0.0005) {
-        l.h = smoothDamp(l.h, l.target, l.st, 0.9, 0.78, dt); active = true;
+        l.h = smoothDamp(l.h, l.target, l.st, 0.9 / CREW_SPEED, 0.78 * CREW_SPEED, dt); active = true;
         if (Math.abs(l.target - l.h) < 0.0006) { l.h = l.target; l.st.v = 0; }
       }
       l.group.position.y = l.h;

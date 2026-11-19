@@ -5,10 +5,11 @@ export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'", // React y three fijan estilos en línea
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://tiles.openfreemap.org",
   "font-src 'self' data:",
-  "connect-src 'self'",
-  "worker-src 'self'",
+  "connect-src 'self' https://tiles.openfreemap.org", // tiles, estilo, fuentes y sprites del mapa
+  "worker-src 'self' blob:", // MapLibre crea su worker desde un blob
+  "child-src blob:",
   "manifest-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",

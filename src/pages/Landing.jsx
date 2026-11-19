@@ -11,6 +11,7 @@ import { useScene } from '../scene/store.js';
 import { createSim } from '../scene/simStore.js';
 import { getAdapter, NetworkError } from '../data/adapter.js';
 import { LiveShop, Calc, LetterWord } from './landingLive.jsx';
+import { AudienceTag, BlueprintGrid, CustomerIcon, DemoCard, MapSection, PixelSeam, TeamIcon } from './landingExtras.jsx';
 
 const AZ = Math.PI / 4;
 const smooth = (t) => t * t * (3 - 2 * t);
@@ -47,8 +48,8 @@ function Header() {
     <header className="site-header" ref={ref} data-tone="light">
       <Wordmark />
       <nav className="site-nav" aria-label={t('nav.menu')}>
-        <a href="#how" onClick={go('how')}>{t('nav.how')}</a>
-        <Link to="/panel">{t('nav.tryDemo')}</Link>
+        <a href="#demo-equipo" onClick={go('demo-equipo')} className="nav-demo"><TeamIcon /><span>{t('nav.demo1')}</span><small>{t('landing.demos.team.tag')}</small></a>
+        <a href="#demo-clientes" onClick={go('demo-clientes')} className="nav-demo"><CustomerIcon /><span>{t('nav.demo2')}</span><small>{t('landing.demos.customer.tag')}</small></a>
         <a href="#contact" onClick={go('contact')}>{t('nav.contact')}</a>
       </nav>
       <div className="header-right"><LangSwitch /></div>
@@ -121,9 +122,10 @@ function Hero() {
             <span className="demo-tag" style={{ justifySelf: 'start' }}>{t('landing.hero.tag')}</span>
             <Reveal as="h1" id="hero-title" className="h-display" lines={t('landing.hero.title')} />
             <p className="lead">{t('landing.hero.lead')}</p>
-            <div className="hero-cta">
-              <Btn to="/panel">{t('landing.hero.cta')}</Btn>
-              <Btn to="/consulta/DEMO01" variant="ghost">{t('landing.hero.cta2')}</Btn>
+            <p className="hero-two">{t('landing.demos.intro')}</p>
+            <div className="demo-cards">
+              <DemoCard who="team" n={1} />
+              <DemoCard who="customer" n={2} />
             </div>
           </div>
           <ol className="chapters" ref={chapters} aria-label={t('landing.tour.title')}>
@@ -175,36 +177,6 @@ function Ribbon() {
   );
 }
 
-function PanelSection() {
-  const { t } = useT();
-  const [state, setState] = useState('in_repair');
-  return (
-    <section className="section section--paper" id="panel" data-tone="paper">
-      <div className="wrap split">
-        <div>
-          <div className="sec-head">
-            <Reveal className="h-section" lines={t('landing.panel.title')} />
-            <p className="lead">{t('landing.panel.lead')}</p>
-          </div>
-          <ul className="points">{t('landing.panel.points').map(([a, b]) => <li key={a}><strong>{a}</strong><span>{b}</span></li>)}</ul>
-        </div>
-        <div className="mock" aria-label={t('landing.panel.try')}>
-          <div className="mock-head">
-            <div><Plate value="1234BCD" /> <span className="hint">Seat León</span></div>
-            <span className="demo-tag">{t('common.demo')}</span>
-          </div>
-          <p className="hint">{t('landing.panel.tryNote')}</p>
-          <div className="choices" role="group" aria-label={t('panel.detail.state')}>
-            {STATES.map((s) => <button key={s} type="button" className="choice" aria-pressed={state === s} onClick={() => setState(s)}>{t(`states.${s}`)}</button>)}
-          </div>
-          <div className="mock-says" aria-live="polite"><small>{t('nav.customer')}</small><span>{t(`consulta.status.${state}`)}</span></div>
-          <Btn to="/panel" variant="block">{t('landing.hero.cta')}</Btn>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function CustomerSection() {
   const { t } = useT();
   const wrap = useRef(null);
@@ -216,23 +188,29 @@ function CustomerSection() {
   }, !reducedMotion);
   const state = STATES[step];
   return (
-    <section className="section--dark on-dark" id="customer" data-tone="dark">
+    <section className="section--paper demo-sec demo2" id="demo-clientes" data-tone="paper" aria-labelledby="demo2-title">
+      <BlueprintGrid />
       <div className="pin-wrap" ref={wrap}>
         <div className="pin-stage">
           <div className="wrap split">
             <div>
-              <div className="sec-head">
-                <Reveal className="h-section" lines={t('landing.customer.title')} />
-                <p className="lead">{t('landing.customer.lead')}</p>
+              <div className="sec-head demo-head">
+                <p className="demo-eyebrow"><span>{t('landing.demos.label', { n: '2' })} · {t('landing.demos.customer.for')}</span><AudienceTag who="customer" /></p>
+                <Reveal className="h-section" id="demo2-title" lines={t('landing.demos.customer.headline')} />
+                <p className="lead">{t('landing.demos.customer.explain')}</p>
+                <div className="demo-cta"><Btn to="/consulta/DEMO01">{t('landing.demos.customer.open')}</Btn><span className="hint">{t('landing.demos.customer.plate')}</span></div>
               </div>
               <ul className="points">{t('landing.customer.points').map(([a, b]) => <li key={a}><strong>{a}</strong><span>{b}</span></li>)}</ul>
             </div>
+            <div className="phone-col">
+            <p className="screen-label"><span>{t('landing.live.phone')}</span><AudienceTag who="customer" /></p>
             <div className="phone">
               <div className="mock-head"><div><span className="hint">{t('landing.customer.cardPlate')}</span><br /><Plate value="1234BCD" /></div><span className="demo-tag">{t('common.demo')}</span></div>
               <div className="stepper" aria-hidden="true">{STATES.map((s, i) => <i key={s} data-on={i <= step} />)}</div>
               <StateChip state={state} />
               <p className="says" aria-live="polite"><span key={state}>{t(`consulta.status.${state}`)}</span></p>
               <Btn to="/consulta/DEMO01" variant="ghost block">{t('landing.hero.cta2')}</Btn>
+            </div>
             </div>
           </div>
         </div>
@@ -259,7 +237,7 @@ function Contact() {
       const res = await api.contact(v);
       if (res.ok) setStatus('ok');
       else if (res.errors) { setErrors(res.errors); setStatus(null); }
-      else setStatus(res.error === 'rate_limited' ? 'rate_limited' : 'generic');
+      else setStatus(['rate_limited', 'not_configured'].includes(res.error) ? res.error : 'generic');
     } catch (err) { setStatus(err instanceof NetworkError ? 'network' : 'generic'); }
   };
   return (
@@ -287,8 +265,8 @@ function Contact() {
           </div>
           <Btn type="submit" disabled={status === 'sending'}>{status === 'sending' ? t('landing.contact.sending') : t('landing.contact.submit')}</Btn>
           <div aria-live="polite">
-            {status === 'ok' && <p className="notice notice--ok">{t('landing.contact.okDemo')}</p>}
-            {status && !['ok', 'sending'].includes(status) && <p className="notice notice--error">{t(`errors.${status}`)}</p>}
+            {status === 'ok' && <p className="notice notice--ok" role="status">{t('landing.contact.ok')}</p>}
+            {status && !['ok', 'sending'].includes(status) && <p className="notice notice--error" role="alert">{t(status === 'not_configured' ? 'landing.contact.notConfigured' : `errors.${status}`)}</p>}
           </div>
         </form>
       </div>
@@ -301,21 +279,22 @@ export default function Landing() {
   useLenis();
   return (
     <>
-      <a className="skip" href="#how" onClick={(e) => { e.preventDefault(); scrollToId('how'); }}>{t('common.skip')}</a>
+      <a className="skip" href="#demo-equipo" onClick={(e) => { e.preventDefault(); scrollToId('demo-equipo'); }}>{t('common.skip')}</a>
       <Header />
       <main>
         <Hero />
         <Ribbon />
         <LiveShop />
+        <PixelSeam from="#0B2A5B" to="#F4F7FC" />
+        <CustomerSection />
         <section className="section" id="how" data-tone="light">
           <div className="wrap">
             <div className="sec-head"><Reveal className="h-section" lines={t('landing.how.title')} /></div>
             <ol className="steps">{t('landing.how.steps').map((s) => <li key={s.title}><h3>{s.title}</h3><p>{s.text}</p></li>)}</ol>
           </div>
         </section>
-        <PanelSection />
-        <CustomerSection />
         <Calc />
+        <MapSection />
         <section className="section section--paper" id="privacy" data-tone="paper">
           <div className="wrap">
             <div className="sec-head"><Reveal className="h-section" lines={t('landing.privacy.title')} /></div>
@@ -336,7 +315,7 @@ export default function Landing() {
           <p className="footer-word" aria-hidden="true"><LetterWord text="Tridom Automotive" /></p>
           <div className="footer-meta">
             <span>{t('landing.footer.by')}</span>
-            {['live', 'panel', 'customer', 'calc', 'privacy'].map((id) => <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToId(id); }}>{t(`nav.${id}`)}</a>)}
+            {[['demo-equipo', 'demo1'], ['demo-clientes', 'demo2'], ['how', 'how'], ['calc', 'calc'], ['ubicacion', 'map'], ['privacy', 'privacy']].map(([id, k]) => <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToId(id); }}>{t(`nav.${k}`)}</a>)}
             <span>{t('landing.footer.demo')}</span>
             <Link to="/privacidad">{t('landing.footer.legal')}</Link>
           </div>

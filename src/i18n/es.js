@@ -36,8 +36,19 @@ export default {
     simulate: 'Simulación', simStop: 'Parar simulación', simNote: 'Reproduce una jornada con coches de demostración.', listTitle: 'Coches en el taller', empty: 'No hay coches en el taller.',
     show3d: 'Volver a la escena 3D', showList: 'Ver como lista',
   },
-  nav: { live: 'En directo', calc: 'Calculadora', how: 'Cómo funciona', panel: 'Panel', customer: 'Cliente', scene: 'Escena', privacy: 'Privacidad', contact: 'Contacto', tryDemo: 'Probar demo', openPanel: 'Abrir el panel demo', menu: 'Menú' },
+  nav: { demo1: 'Demo 1', demo2: 'Demo 2', map: 'Ubicación', live: 'En directo', calc: 'Calculadora', how: 'Cómo funciona', panel: 'Panel', customer: 'Cliente', scene: 'Escena', privacy: 'Privacidad', contact: 'Contacto', tryDemo: 'Probar demo', openPanel: 'Abrir el panel demo', menu: 'Menú' },
   landing: {
+    demos: {
+      label: 'Demo {n}', intro: 'Son dos cosas distintas. Pruébalas por separado:', see: 'Ver cómo funciona',
+      team: { tag: 'Lo usa tu equipo', for: 'Para tu equipo', title: 'Panel del taller', line: 'La oficina y los mecánicos marcan cada coche con un toque.', open: 'Abrir el panel', headline: ['El panel', 'del taller'], explain: 'Lo usan la oficina y los mecánicos: un toque por cada cambio de estado, y la ubicación se asigna sola.', pin: 'Código DEMO01 · PIN 2468' },
+      customer: { tag: 'Lo ve tu cliente', for: 'Para tus clientes', title: 'Consulta por matrícula', line: 'El cliente escribe su matrícula y ve cómo va su coche.', open: 'Abrir la consulta', headline: ['La consulta', 'del cliente'], explain: 'Lo ve tu cliente en su móvil: escribe la matrícula y ve en qué punto está su coche, y solo el suyo.', plate: 'Prueba con la matrícula 1234 BCD' },
+    },
+    map: {
+      hours: 'Horario', demoTag: 'Ubicación de demostración', title: ['Del mapa', 'a la puerta'],
+      lead: 'Así llegaría un cliente a tu taller. Esta ubicación es de ejemplo: no corresponde a ningún taller real.',
+      steps: ['España', 'València', 'El centro', 'La calle', 'La puerta'], directions: 'Cómo llegar', external: 'se abre en otra pestaña',
+      note: 'Mapa de OpenFreeMap con datos de OpenStreetMap.', loading: 'Cargando el mapa…',
+    },
     hero: {
       title: ['Cada coche del taller,', 'a la vista.'],
       lead: 'El mecánico marca el estado con un toque. El cliente lo consulta con su matrícula y ve su coche en la escena del taller, sin llamar para preguntar.',
@@ -83,7 +94,7 @@ export default {
     live: {
       title: ['El mecánico toca,', 'el cliente lo ve.'],
       lead: 'A la izquierda, el tablero del taller. A la derecha, el móvil del cliente. Toca un coche, cambia su estado y mira cómo responde el móvil al instante.',
-      tablet: 'Tablero del taller', phone: 'Móvil del cliente', pick: 'Cambia el estado de {plate}', log: 'Últimos cambios', logEmpty: 'Los cambios irán apareciendo aquí.',
+      tablet: 'Pantalla del taller', board: 'Tablero del taller', phone: 'Móvil del cliente', pick: 'Cambia el estado de {plate}', log: 'Últimos cambios', logEmpty: 'Los cambios irán apareciendo aquí.',
       pause: 'Pausar la jornada', play: 'Reanudar la jornada', tv: 'Ver la pantalla de la sala de espera',
       note: 'Demostración con coches y matrículas ficticios. Nada sale de tu navegador.',
     },
@@ -91,6 +102,8 @@ export default {
       title: ['¿Cuánto te cuestan', 'las llamadas?'],
       lead: 'Pon tus propias cifras. Es una cuenta sencilla y sin promesas: cuánto tiempo y dinero se va cada mes en llamadas solo para preguntar por un coche.',
       calls: 'Llamadas al día preguntando por un coche', mins: 'Lo que dura cada llamada', rate: 'Lo que vale una hora de tu taller',
+      avoid: 'Qué parte de esas llamadas se evitaría', avoidNote: 'Es una estimación de tu propio taller (50 % para empezar), no una promesa de ahorro.', avoidResult: 'Si se evitara el {p} %',
+      formulaTitle: 'Así se calcula', f1: '{c} llamadas × {m} min × {d} días ÷ 60 = {h} h/mes', f2: '{h} h × {r} €/h = {e} €/mes', f3: '{e} € × {p} % = {a} €/mes',
       result: 'Lo que se te va cada mes', hours: 'horas al mes', money: 'euros al mes', eq: 'Son unas {n} jornadas de 8 horas cada mes al teléfono.',
       note: 'Estimación con tus cifras y {d} días laborables al mes. Los valores de partida son un ejemplo, no una medida de Tridom Automotive.',
     },
@@ -111,6 +124,7 @@ export default {
       pricing: 'Tarifas: todavía sin publicar.',
       name: 'Tu nombre', workshop: 'Nombre del taller', email: 'Correo electrónico', phone: 'Teléfono', message: 'Cómo trabaja tu taller', messageHint: 'Mínimo 10 caracteres.',
       consent: 'He leído la política de privacidad y acepto que Tridom use estos datos para responderme.', submit: 'Enviar mensaje', sending: 'Enviando…',
+      ok: 'Mensaje enviado. Te responderemos lo antes posible.', notConfigured: 'El envío del formulario todavía no está activo. Inténtalo más adelante.',
       okDemo: 'Mensaje validado. El envío de este formulario todavía no está conectado a un buzón (pendiente de Tridom).',
     },
     footer: { by: 'Un producto de Tridom · Valencia', legal: 'Privacidad', demo: 'Web de demostración. Nombre provisional.', rights: 'Los nombres de marcas y modelos se citan solo para identificar vehículos.' },

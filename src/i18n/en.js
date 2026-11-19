@@ -36,8 +36,19 @@ export default {
     simulate: 'Simulation', simStop: 'Stop simulation', simNote: 'Plays a working day with demo cars.', listTitle: 'Cars in the workshop', empty: 'There are no cars in the workshop.',
     show3d: 'Back to the 3D scene', showList: 'View as a list',
   },
-  nav: { live: 'Live', calc: 'Calculator', how: 'How it works', panel: 'Panel', customer: 'Customer', scene: 'Scene', privacy: 'Privacy', contact: 'Contact', tryDemo: 'Try the demo', openPanel: 'Open the demo panel', menu: 'Menu' },
+  nav: { demo1: 'Demo 1', demo2: 'Demo 2', map: 'Location', live: 'Live', calc: 'Calculator', how: 'How it works', panel: 'Panel', customer: 'Customer', scene: 'Scene', privacy: 'Privacy', contact: 'Contact', tryDemo: 'Try the demo', openPanel: 'Open the demo panel', menu: 'Menu' },
   landing: {
+    demos: {
+      label: 'Demo {n}', intro: 'These are two different things. Try them separately:', see: 'See how it works',
+      team: { tag: 'Used by your team', for: 'For your team', title: 'Workshop panel', line: 'The office and the mechanics update each car with one tap.', open: 'Open the panel', headline: ['The workshop', 'panel'], explain: 'Used by the office and the mechanics: one tap per status change, and the location is assigned automatically.', pin: 'Code DEMO01 · PIN 2468' },
+      customer: { tag: 'Seen by your customer', for: 'For your customers', title: 'Status by plate', line: 'The customer types their plate and sees how their car is doing.', open: 'Open the status page', headline: ['The customer', 'status page'], explain: 'Seen by your customer on their phone: they type the plate and see where their car is, and only theirs.', plate: 'Try the plate 1234 BCD' },
+    },
+    map: {
+      hours: 'Opening hours', demoTag: 'Demo location', title: ['From the map', 'to the door'],
+      lead: 'This is how a customer would find your workshop. This location is an example: it is not a real workshop.',
+      steps: ['Spain', 'Valencia', 'City centre', 'The street', 'The door'], directions: 'Get directions', external: 'opens in a new tab',
+      note: 'Map by OpenFreeMap with OpenStreetMap data.', loading: 'Loading the map…',
+    },
     hero: {
       title: ['Every car in the workshop,', 'in plain sight.'],
       lead: 'The mechanic sets the status with one tap. The customer checks it with their number plate and sees their car in the workshop scene, without phoning to ask.',
@@ -83,7 +94,7 @@ export default {
     live: {
       title: ['The mechanic taps,', 'the customer sees it.'],
       lead: 'On the left, the workshop board. On the right, the customer’s phone. Tap a car, change its status and watch the phone answer instantly.',
-      tablet: 'Workshop board', phone: 'Customer phone', pick: 'Change the status of {plate}', log: 'Latest changes', logEmpty: 'Changes will show up here.',
+      board: 'Workshop board', tablet: 'Workshop screen', phone: 'Customer phone', pick: 'Change the status of {plate}', log: 'Latest changes', logEmpty: 'Changes will show up here.',
       pause: 'Pause the day', play: 'Resume the day', tv: 'See the waiting-room screen',
       note: 'Demo with fictional cars and plates. Nothing leaves your browser.',
     },
@@ -91,6 +102,8 @@ export default {
       title: ['How much do the', 'calls cost you?'],
       lead: 'Use your own figures. It is a plain sum with no promises: how much time and money goes every month on calls just to ask about a car.',
       calls: 'Calls a day asking about a car', mins: 'How long each call lasts', rate: 'What an hour of your workshop is worth',
+      avoid: 'How many of those calls would be avoided', avoidNote: 'This is your own workshop’s estimate (50 % to start with), not a promise of savings.', avoidResult: 'If {p} % were avoided',
+      formulaTitle: 'How it is calculated', f1: '{c} calls × {m} min × {d} days ÷ 60 = {h} h/month', f2: '{h} h × €{r}/h = €{e}/month', f3: '€{e} × {p} % = €{a}/month',
       result: 'What you lose every month', hours: 'hours a month', money: 'euros a month', eq: 'That is about {n} working days of 8 hours every month on the phone.',
       note: 'Estimate from your figures and {d} working days a month. The starting values are an example, not a measurement from Tridom Automotive.',
     },
@@ -111,6 +124,7 @@ export default {
       pricing: 'Pricing: not published yet.',
       name: 'Your name', workshop: 'Workshop name', email: 'Email', phone: 'Phone', message: 'How your workshop runs', messageHint: 'At least 10 characters.',
       consent: 'I have read the privacy policy and agree that Tridom uses these details to reply to me.', submit: 'Send message', sending: 'Sending…',
+      ok: 'Message sent. We will reply as soon as we can.', notConfigured: 'Sending this form is not active yet. Please try again later.',
       okDemo: 'Message validated. This form is not connected to an inbox yet (pending on Tridom’s side).',
     },
     footer: { by: 'A product by Tridom · Valencia', legal: 'Privacy', demo: 'Demo website. Working name.', rights: 'Make and model names are quoted only to identify vehicles.' },
